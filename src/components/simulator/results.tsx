@@ -51,12 +51,21 @@ function Row({
   );
 }
 
-const tooltipStyle = {
-  background: "hsl(var(--popover))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 8,
-  fontSize: 12,
-};
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload || !payload.length) return null;
+  const value = payload[0].value;
+  if (value == null) return null;
+  const n = Number(value);
+  const isPos = n >= 0;
+  return (
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 shadow-md">
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">{label}</div>
+      <div className={cn("font-mono text-sm font-semibold tabular-nums", isPos ? "text-success" : "text-destructive")}>
+        {eur(n)}
+      </div>
+    </div>
+  );
+}
 
 export function ResultsView({ sim }: { sim: Sim }) {
   const { s, m, cashOk } = sim;
