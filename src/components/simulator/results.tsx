@@ -51,12 +51,21 @@ function Row({
   );
 }
 
-const tooltipStyle = {
-  background: "hsl(var(--popover))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 8,
-  fontSize: 12,
-};
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload || !payload.length) return null;
+  const value = payload[0].value;
+  if (value == null) return null;
+  const n = Number(value);
+  const isPos = n >= 0;
+  return (
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 shadow-md">
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">{label}</div>
+      <div className={cn("font-mono text-sm font-semibold tabular-nums", isPos ? "text-success" : "text-destructive")}>
+        {eur(n)}
+      </div>
+    </div>
+  );
+}
 
 export function ResultsView({ sim }: { sim: Sim }) {
   const { s, m, cashOk } = sim;
@@ -146,7 +155,7 @@ export function ResultsView({ sim }: { sim: Sim }) {
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis dataKey="mois" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" />
                 <YAxis tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" tickFormatter={(v) => v / 1000 + "k"} width={42} />
-                <Tooltip formatter={(v: unknown) => eur(Number(v))} contentStyle={tooltipStyle} labelStyle={{ color: "var(--color-primary)" }} />
+                <Tooltip content={<ChartTooltip />} />
                 <ReferenceLine y={0} stroke="var(--color-destructive)" strokeDasharray="4 4" />
                 <Line type="monotone" dataKey="treso" stroke="var(--color-chart-1)" strokeWidth={2.5} dot={{ r: 3, fill: "var(--color-chart-1)" }} activeDot={{ r: 5 }} />
               </LineChart>
@@ -167,7 +176,7 @@ export function ResultsView({ sim }: { sim: Sim }) {
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis dataKey="volume" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" />
                 <YAxis tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" tickFormatter={(v) => v / 1000 + "k"} width={42} />
-                <Tooltip formatter={(v: unknown) => eur(Number(v))} contentStyle={tooltipStyle} labelStyle={{ color: "var(--color-primary)" }} cursor={{ fill: "var(--color-muted)" }} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-muted)" }} />
                 <Bar dataKey="net" radius={[6, 6, 0, 0]}>
                   {m.volScenarios.map((e, i) => (
                     <Cell key={i} fill={palette[i % palette.length]} stroke={e.current ? "var(--color-foreground)" : undefined} strokeWidth={e.current ? 2 : 0} />
