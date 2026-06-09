@@ -176,7 +176,7 @@ export function ResultsView({ sim }: { sim: Sim }) {
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis dataKey="volume" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" />
                 <YAxis tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" tickFormatter={(v) => v / 1000 + "k"} width={42} />
-                <Tooltip formatter={(v: unknown) => eur(Number(v))} contentStyle={tooltipStyle} labelStyle={{ color: "var(--color-primary)" }} cursor={{ fill: "var(--color-muted)" }} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-muted)" }} />
                 <Bar dataKey="net" radius={[6, 6, 0, 0]}>
                   {m.volScenarios.map((e, i) => (
                     <Cell key={i} fill={palette[i % palette.length]} stroke={e.current ? "var(--color-foreground)" : undefined} strokeWidth={e.current ? 2 : 0} />
