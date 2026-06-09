@@ -155,7 +155,7 @@ export function ResultsView({ sim }: { sim: Sim }) {
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis dataKey="mois" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" />
                 <YAxis tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} stroke="var(--color-border)" tickFormatter={(v) => v / 1000 + "k"} width={42} />
-                <Tooltip formatter={(v: unknown) => eur(Number(v))} contentStyle={tooltipStyle} labelStyle={{ color: "var(--color-primary)" }} />
+                <Tooltip content={<ChartTooltip />} />
                 <ReferenceLine y={0} stroke="var(--color-destructive)" strokeDasharray="4 4" />
                 <Line type="monotone" dataKey="treso" stroke="var(--color-chart-1)" strokeWidth={2.5} dot={{ r: 3, fill: "var(--color-chart-1)" }} activeDot={{ r: 5 }} />
               </LineChart>
