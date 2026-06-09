@@ -3,13 +3,14 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import type { Hypotheses } from "./use-simulator";
+import type { Hypotheses, Mode } from "./use-simulator";
 import { eur } from "./use-simulator";
 
 type Props = {
   s: Hypotheses;
   update: <K extends keyof Hypotheses>(k: K) => (v: Hypotheses[K]) => void;
   reset: () => void;
+  setPreset: (mode: Mode) => void;
 };
 
 function Row({
@@ -26,7 +27,7 @@ function Row({
   );
 }
 
-export function AssumptionsPanel({ s, update, reset }: Props) {
+export function AssumptionsPanel({ s, update, reset, setPreset }: Props) {
   return (
     <Card className="h-fit">
       <CardContent className="p-5">
@@ -38,9 +39,31 @@ export function AssumptionsPanel({ s, update, reset }: Props) {
         </div>
 
         <div className="mb-4">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Statut juridique</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Mode d'hypothèses</div>
           <div className="grid grid-cols-2 gap-2">
-            {(["SAS", "SARL"] as const).map((st) => (
+            {(["prudent", "realiste"] as const).map((md) => (
+              <button
+                key={md}
+                onClick={() => setPreset(md)}
+                className={`h-9 rounded-md text-sm font-semibold border transition-colors ${
+                  s.mode === md
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {md === "prudent" ? "Prudent" : "Réaliste"}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1.5 leading-snug">
+            Réaliste = toutes les charges réelles (reconditionnement, assurance, diffusion, déplacements, décote).
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Statut juridique</div>
+          <div className="grid grid-cols-3 gap-2">
+            {(["SAS", "SASU", "SARL"] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => update("statut")(st)}
@@ -86,8 +109,9 @@ export function AssumptionsPanel({ s, update, reset }: Props) {
             <AccordionContent className="pt-2">
               <Row label="Préparation" value={s.prep} set={update("prep")} min={0} max={800} step={25} />
               <Row label="Transport + carburant" value={s.transport} set={update("transport")} min={0} max={800} step={25} />
-              <Row label="Provision garantie" value={s.garantie} set={update("garantie")} min={0} max={1000} step={25} />
+              <Row label="Provision garantie" value={s.garantie} set={update("garantie")} min={0} max={1500} step={25} />
               <Row label="Petits frais (CT, annonce…)" value={s.petits} set={update("petits")} min={0} max={400} step={5} />
+              <Row label="Provision décote / invendus" value={s.decote} set={update("decote")} min={0} max={500} step={25} />
             </AccordionContent>
           </AccordionItem>
 

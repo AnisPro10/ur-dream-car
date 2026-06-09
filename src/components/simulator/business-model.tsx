@@ -25,9 +25,10 @@ function PhaseCard({
 
 const compare: [string, string, string][] = [
   ["Régime social du dirigeant", "Assimilé salarié", "Gérant majoritaire (TNS)"],
-  ["Cotisations si non rémunéré", "Aucune", "≈ 1 200 €/an"],
+  ["Cotisations si non rémunéré", "Aucune", "≈ 1 300 €/an"],
   ["Charges sur un salaire", "≈ 80 % du net", "≈ 45 % du net"],
-  ["Dividendes", "Flat tax 30 %", "+ ≈ 45 % au-delà de 10 % du capital"],
+  ["Dividendes", "Flat tax 31,4 %", "+ ≈ 45 % au-delà de 10 % du capital"],
+  ["Cession de parts / actions", "Libre (0,1 %)", "Agrément (3 %)"],
   ["Maintien de l'ARE (non rémunéré)", "Simple et propre", "Parasité par le TNS"],
   ["Flexibilité / entrée d'associés", "Élevée", "Plus encadrée"],
 ];
@@ -75,10 +76,10 @@ export function BusinessModel() {
           title="Modèle financier"
           accentClass="border-l-[var(--color-chart-3)]"
           points={[
-            { k: "Marge réelle / voiture", v: "≈ 765 € en entrée de gamme, ≈ 1 182 € en Crit'Air 2, après TVA sur marge et frais variables (485 €)." },
-            { k: "Structure", v: "Charges fixes 500 €/mois. Seuil de rentabilité sous une voiture par mois." },
-            { k: "Année 1", v: "CA ≈ 164 400 € ; contribution ≈ 21 360 € ; résultat net ≈ 13 056 € ; point bas trésorerie ≈ 7 100 € ; ROI ≈ 72 %." },
-            { k: "Verdict", v: "Viable et peu risqué. À 24 voitures, revenu d'appoint auto-financé ; la rentabilité réelle vient du volume et de la gamme." },
+            { k: "Marge réelle / voiture", v: "Entrée de gamme ≈ −102 €/voiture (perte), Crit'Air 2 ≈ +315 €, après TVA sur marge et frais variables (935 €, dont 700 € de garantie). Seul le Crit'Air 2 est rentable." },
+            { k: "Structure", v: "Charges fixes ~500 €/mois (prudent) à ~1 264 €/mois (réaliste). Seuil de rentabilité ≈ 257 voitures/an : la marge par voiture est trop faible." },
+            { k: "Année 1", v: "CA ≈ 152 400 € ; résultat net ≈ −5 440 € (prudent) à −16 410 € (réaliste). BFR ≈ 22 540 € > capital 18 000 € : sous-capitalisation." },
+            { k: "Verdict", v: "Le modèle « parc d'entrée de gamme » est déficitaire une fois honnêtement chiffré. La voie viable : démarrer en courtage (sans stock), améliorer le sourcing, basculer vers le Crit'Air 2." },
           ]}
         />
       </div>
@@ -89,8 +90,8 @@ export function BusinessModel() {
           <div className="grid md:grid-cols-2 gap-x-6">
             <Point k="Approche" v="Vendre la confiance : transparence totale, contrôle expliqué, accompagnement avant et après l'achat." />
             <Point k="Cible" v="Primo-acheteurs et femmes en quête de réassurance au démarrage, élargissement ensuite." />
-            <Point k="Stratégie de départ" v="Sourcing particuliers + bouche-à-oreille ; entrée de gamme et Crit'Air 2 ; IDF avec livraison ; charges minimales ; dirigeant non rémunéré (ARE)." />
-            <Point k="Stratégie d'évolution" v="Monter en volume et en Crit'Air 2 ; enchères pro une fois le statut en place ; fournisseur en paiement après-vente ; ARCE pour financer le stock." />
+            <Point k="Stratégie de départ" v="Démarrer en courtage (sans stock, sans BFR, sans garantie portée) pour prouver la demande ; sourcing particuliers + bouche-à-oreille ; dirigeant non rémunéré (ARE) ; financement prêt d'honneur 0 % + ARCE." />
+            <Point k="Stratégie d'évolution" v="Basculer vers le stock une fois la réputation et le capital en place ; monter en Crit'Air 2 (seul segment rentable) ; renforcer le sourcing pour baisser le coût garantie ; enchères pro." />
             <Point k="Zone géographique" v="Île-de-France au démarrage (local), puis livraison nationale, dans le respect des ZFE." />
             <Point k="Type de véhicules" v="Entrée de gamme (3 000–5 000 €, hors-ZFE) et Crit'Air 2 (clientèle parisienne)." />
           </div>

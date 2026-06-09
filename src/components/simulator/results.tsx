@@ -85,7 +85,7 @@ export function ResultsView({ sim }: { sim: Sim }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi icon={Coins} label="Résultat net société" value={eur(m.netSoc)} sub="après rémunération" tone={m.netSoc > 0 ? "good" : "bad"} />
-        <Kpi icon={Wallet} label="Revenu net dirigeant" value={eur(m.revenuDirigeant)} sub="salaire + 1/3 dividendes" />
+        <Kpi icon={Wallet} label="Revenu net dirigeant" value={eur(m.revenuDirigeant)} sub={`salaire + ${m.nAssoc === 1 ? "dividendes" : "1/" + m.nAssoc + " dividendes"}`} />
         <Kpi icon={Percent} label="Marge nette" value={pct(m.tMargeNette)} sub={`brute ${pct(m.tMargeBrute)}`} />
         <Kpi icon={TrendingUp} label="Point bas trésorerie" value={eur(m.pointBas)} sub={cashOk ? "capital suffisant ✓" : "capital insuffisant"} tone={cashOk ? "good" : "bad"} />
       </div>
@@ -121,7 +121,7 @@ export function ResultsView({ sim }: { sim: Sim }) {
               <Row label="Dividendes bruts distribués" value={eur(m.divBrut)} />
               <Row label="− Fiscalité dividendes" value={eur(-m.divFisc)} indent />
               <Row label="Dividendes nets (total)" value={eur(m.divNet)} strong />
-              <Row label="Dividendes nets / associé" value={eur(m.divNet / 3)} indent />
+              <Row label="Dividendes nets / associé" value={eur(m.divNet / m.nAssoc)} indent />
               <Row label="Résultat conservé (réinvesti)" value={eur(m.netConserve)} />
               <Row label="Revenu net dirigeant" value={eur(m.revenuDirigeant)} strong accent />
             </CardContent>
@@ -189,8 +189,8 @@ export function ResultsView({ sim }: { sim: Sim }) {
       </Card>
 
       <p className="text-[11px] text-muted-foreground leading-relaxed">
-        Modèle de gestion à but de simulation. Charges sociales : SAS ~80 % du net, SARL TNS ~45 % ; cotisations minimales SARL 1 200 €/an si non rémunéré.
-        Dividendes : flat tax 30 %, + ~45 % en SARL au-delà de 10 % du capital. IS 15 % jusqu'à 42 500 € puis 25 %. À valider avec un expert-comptable.
+        Modèle de gestion à but de simulation. Charges sociales : SAS / SASU ~80 % du net, SARL TNS ~45 % ; cotisations minimales SARL ≈ 1 300 €/an si non rémunéré.
+        Dividendes : flat tax 31,4 % (2026), + ~45 % en SARL au-delà de 10 % du capital. IS 15 % jusqu'à 42 500 € puis 25 %. À valider avec un expert-comptable.
       </p>
     </div>
   );

@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 
 export const TVA = 0.2;
-export const SAS_SOC = 0.8;
-export const SARL_SOC = 0.45;
-export const COTIS_MIN = 1200;
-export const FLAT = 0.3;
-export const SARL_DIV = 0.45;
+export const SAS_SOC = 0.8; // SAS/SASU : charges sociales ~80 % du net (assimilé salarié)
+export const SARL_SOC = 0.45; // SARL gérant majoritaire (TNS) ~45 % du net
+export const COTIS_MIN = 1300; // cotisations minimales SARL si non rémunéré (2026)
+export const FLAT = 0.314; // flat tax / PFU 2026 (12,8 % IR + 18,6 % prélèvements sociaux)
+export const SARL_DIV = 0.45; // cotisations TNS sur dividendes SARL > 10 % du capital
 
 export const eur = (n: number) =>
   (Math.round(n) === 0 ? "0" : new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(n))) + " €";
@@ -15,14 +15,21 @@ export const num = (n: number, d = 1) =>
 
 const isTax = (r: number) => (r > 0 ? Math.min(r, 42500) * 0.15 + Math.max(0, r - 42500) * 0.25 : 0);
 
-export type Statut = "SAS" | "SARL";
+export type Statut = "SAS" | "SASU" | "SARL";
+export type Mode = "prudent" | "realiste";
+
+// Presets de charges : prudent (modèle audité v3) vs réaliste (toutes charges réelles)
+export const PRESETS = {
+  prudent: { prep: 50, transport: 50, garantie: 700, petits: 135, decote: 0, local: 300, assur: 50, autres: 150 },
+  realiste: { prep: 250, transport: 50, garantie: 450, petits: 135, decote: 125, local: 500, assur: 200, autres: 564 },
+} as const;
 
 export const defaults = {
-  achatEg: 4000, reventeEg: 5500, achatCa: 8000, reventeCa: 10000,
-  prep: 50, transport: 50, garantie: 250, petits: 135,
-  local: 300, assur: 50, autres: 150,
-  volume: 24, mixEg: 70, rotation: 1, capital: 18000,
+  achatEg: 4000, reventeEg: 5000, achatCa: 8000, reventeCa: 9500,
+  ...PRESETS.prudent,
+  volume: 24, mixEg: 70, rotation: 2, capital: 18000,
   statut: "SAS" as Statut, remun: 0, distrib: 0, apresVente: 0, cfe: 0,
+  mode: "prudent" as Mode,
 };
 export type Hypotheses = typeof defaults;
 
@@ -31,6 +38,8 @@ export function useSimulator() {
   const update = <K extends keyof Hypotheses>(k: K) => (v: Hypotheses[K]) =>
     setS((p) => ({ ...p, [k]: v }));
   const reset = () => setS(defaults);
+  // Bascule un préréglage de charges (prudent / réaliste) sans toucher aux prix ni au volume
+  const setPreset = (mode: Mode) => setS((p) => ({ ...p, ...PRESETS[mode], mode }));
 
   const m = useMemo(() => {
     const mix = s.mixEg / 100;
@@ -39,22 +48,24 @@ export function useSimulator() {
     const achats = volEg * s.achatEg + volCa * s.achatCa;
     const margeBrute = ca - achats;
     const tvaMarge = margeBrute * TVA / (1 + TVA);
-    const fvUnit = s.prep + s.transport + s.garantie + s.petits;
+    const fvUnit = s.prep + s.transport + s.garantie + s.petits + s.decote;
     const fraisVar = s.volume * fvUnit;
     const contribution = margeBrute - tvaMarge - fraisVar;
     const chargesFixesAn = (s.local + s.assur + s.autres) * 12;
     const excedent = contribution - chargesFixesAn - s.cfe;
-    const tauxSoc = s.statut === "SARL" ? SARL_SOC : SAS_SOC;
+    const isSarl = s.statut === "SARL";
+    const tauxSoc = isSarl ? SARL_SOC : SAS_SOC;
     const chargesSoc = s.remun * tauxSoc;
-    const cotisMin = s.statut === "SARL" && s.remun === 0 ? COTIS_MIN : 0;
+    const cotisMin = isSarl && s.remun === 0 ? COTIS_MIN : 0;
     const ravis = excedent - s.remun - chargesSoc - cotisMin;
     const is = isTax(ravis);
     const netSoc = ravis - is;
     const divBrut = Math.max(0, netSoc) * (s.distrib / 100);
-    const divFisc = divBrut * FLAT + (s.statut === "SARL" ? Math.max(0, divBrut - 0.1 * s.capital) * SARL_DIV : 0);
+    const divFisc = divBrut * FLAT + (isSarl ? Math.max(0, divBrut - 0.1 * s.capital) * SARL_DIV : 0);
     const divNet = divBrut - divFisc;
     const netConserve = netSoc - divBrut;
-    const revenuDirigeant = s.remun + divNet / 3;
+    const nAssoc = s.statut === "SASU" ? 1 : 3; // SASU = associé unique
+    const revenuDirigeant = s.remun + divNet / nAssoc;
     const tMargeBrute = ca ? margeBrute / ca : 0;
     const tContribution = ca ? contribution / ca : 0;
     const tMargeNette = ca ? netSoc / ca : 0;
@@ -91,11 +102,11 @@ export function useSimulator() {
     return {
       ca, achats, margeBrute, tvaMarge, fraisVar, contribution, chargesFixesAn,
       excedent, chargesSoc, cotisMin, ravis, is, netSoc, divBrut, divFisc, divNet,
-      netConserve, revenuDirigeant, tMargeBrute, tContribution, tMargeNette,
+      netConserve, revenuDirigeant, nAssoc, tMargeBrute, tContribution, tMargeNette,
       contribParVoiture, seuilAn, treso, pointBas, stockMoyen, bfrFinance,
       rotationStock, roi, volScenarios, cEg, cCa,
     };
   }, [s]);
 
-  return { s, update, reset, m, cashOk: m.pointBas >= 0 };
+  return { s, update, reset, setPreset, m, cashOk: m.pointBas >= 0 };
 }

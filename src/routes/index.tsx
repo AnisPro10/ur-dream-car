@@ -41,7 +41,7 @@ function SimulatorPage() {
 
           <TabsContent value="sim" className="mt-0">
             <div className="grid lg:grid-cols-[340px_1fr] gap-6">
-              <AssumptionsPanel s={sim.s} update={sim.update} reset={sim.reset} />
+              <AssumptionsPanel s={sim.s} update={sim.update} reset={sim.reset} setPreset={sim.setPreset} />
               <ResultsView sim={sim} />
             </div>
           </TabsContent>
