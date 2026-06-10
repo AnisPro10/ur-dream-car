@@ -133,3 +133,42 @@ test("remuneration insoutenable detectee", () => {
   expect(computeModel({ ...defaults, remun: 60000 }).remunInsoutenable).toBe(true);
   expect(computeModel({ ...defaults, remun: 0 }).remunInsoutenable).toBe(false);
 });
+
+// ---- Mode COURTAGE : commission, sans achat ni stock ni BFR ----
+test("courtage : CA = commission x volume, sans achat ni stock", () => {
+  const m = computeModel({ ...defaults, activite: "courtage" });
+  approx(m.ca, 600 * 24); // 14 400
+  approx(m.achats, 0);
+  approx(m.stockMoyen, 0);
+  approx(m.bfrFinance, 0);
+  approx(m.tvaMarge, 14400 * 0.2 / 1.2); // TVA 20% sur la commission
+  approx(m.contribution, 7560); // 14400 - 2400 - (185 x 24)
+  approx(m.netSoc, 1326, 2); // rentable la ou le stock perd -5440
+  expect(m.courtage).toBe(true);
+  expect(m.netSoc).toBeGreaterThan(0);
+});
+
+// ---- Courtage rentable la ou le stock perd (memes parametres) ----
+test("courtage > stock sur le resultat net (prudent)", () => {
+  const stock = computeModel({ ...defaults, activite: "stock" });
+  const courtage = computeModel({ ...defaults, activite: "courtage" });
+  expect(stock.netSoc).toBeLessThan(0);
+  expect(courtage.netSoc).toBeGreaterThan(stock.netSoc);
+});
+
+// ---- Financement : ressources = capital + ARCE + pret d'honneur ----
+test("financement : ARCE et pret d'honneur couvrent le BFR", () => {
+  const sansAide = computeModel({ ...defaults });
+  approx(sansAide.ressources, 18000);
+  expect(sansAide.financementOk).toBe(false); // BFR ~20 800 > 18 000
+  const avecAide = computeModel({ ...defaults, arce: 6000, pretHonneur: 10000 });
+  approx(avecAide.ressources, 34000);
+  expect(avecAide.financementOk).toBe(true);
+});
+
+// ---- Courtage : financement OK sans aide (pas de BFR a financer) ----
+test("courtage : financement OK meme a faible capital (pas de BFR)", () => {
+  const m = computeModel({ ...defaults, activite: "courtage", capital: 5000 });
+  approx(m.bfrFinance, 0);
+  expect(m.financementOk).toBe(true);
+});

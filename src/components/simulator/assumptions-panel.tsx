@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import type { Hypotheses, Mode } from "./use-simulator";
+import type { Hypotheses, Mode, Activite } from "./use-simulator";
 import { eur } from "./use-simulator";
 
 type Props = {
@@ -99,6 +99,19 @@ export function AssumptionsPanel({ s, update, reset, setPreset, presetIntact }: 
           />
         </div>
 
+        <div className="mb-4">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Modèle d'activité</div>
+          <Segmented<Activite>
+            label="Modèle d'activité" cols="grid-cols-2"
+            value={s.activite}
+            onChange={(a) => update("activite")(a)}
+            options={[{ v: "stock", label: "Stock (achat-revente)" }, { v: "courtage", label: "Courtage (mandat)" }]}
+          />
+          <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
+            Stock = vous achetez puis revendez (marge, BFR, garantie portée). Courtage = vous facturez une commission sans acheter le véhicule (sans stock, sans BFR).
+          </p>
+        </div>
+
         <Accordion type="multiple" defaultValue={["rem", "act"]} className="w-full">
           <AccordionItem value="rem">
             <AccordionTrigger className="text-xs uppercase tracking-wider text-primary font-semibold">Rémunération</AccordionTrigger>
@@ -148,11 +161,23 @@ export function AssumptionsPanel({ s, update, reset, setPreset, presetIntact }: 
           <AccordionItem value="act">
             <AccordionTrigger className="text-xs uppercase tracking-wider text-primary font-semibold">Activité & financement</AccordionTrigger>
             <AccordionContent className="pt-2">
-              <Row label="Volume annuel" value={s.volume} set={update("volume")} min={6} max={120} step={1} fmt={(v) => v + " voit."} />
+              <Row label="Volume annuel" value={s.volume} set={update("volume")} min={6} max={120} step={1} fmt={(v) => v + (s.activite === "courtage" ? " mandats" : " voit.")} />
+              {s.activite === "courtage" && (
+                <Row label="Commission moyenne / mandat" value={s.commission} set={update("commission")} min={200} max={2500} step={50} />
+              )}
               <Row label="Part entrée de gamme" value={s.mixEg} set={update("mixEg")} min={0} max={100} step={5} fmt={(v) => v + " %"} />
-              <Row label="Délai de revente" value={s.rotation} set={update("rotation")} min={0.5} max={4} step={0.5} fmt={(v) => v + " mois"} />
-              <Row label="Achats en paiement après-vente" value={s.apresVente} set={update("apresVente")} min={0} max={100} step={5} fmt={(v) => v + " %"} />
+              {s.activite === "stock" && (
+                <>
+                  <Row label="Délai de revente" value={s.rotation} set={update("rotation")} min={0.5} max={4} step={0.5} fmt={(v) => v + " mois"} />
+                  <Row label="Achats en paiement après-vente" value={s.apresVente} set={update("apresVente")} min={0} max={100} step={5} fmt={(v) => v + " %"} />
+                </>
+              )}
               <Row label="Capital de départ" value={s.capital} set={update("capital")} min={5000} max={100000} step={1000} />
+              <Row label="ARCE (capital France Travail)" value={s.arce} set={update("arce")} min={0} max={40000} step={500} />
+              <Row label="Prêt d'honneur 0 % (IDF ≤ 25 000)" value={s.pretHonneur} set={update("pretHonneur")} min={0} max={50000} step={1000} />
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                ARCE = 60 % de vos droits ARE versés en capital. Le prêt d'honneur (Initiative / Réseau Entreprendre) finance la trésorerie sans intérêt. Ces ressources couvrent le besoin en fonds de roulement (BFR).
+              </p>
             </AccordionContent>
           </AccordionItem>
         </Accordion>

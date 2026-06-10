@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export const TVA = 0.2;
 export const SAS_SOC = 0.8; // SAS/SASU : charges sociales ~80 % du net (assimilé salarié)
@@ -22,6 +22,7 @@ const isTax = (r: number) => (r > 0 ? Math.min(r, IS_SEUIL) * IS_REDUIT + Math.m
 
 export type Statut = "SAS" | "SASU" | "SARL";
 export type Mode = "prudent" | "realiste";
+export type Activite = "stock" | "courtage";
 export type TresoPoint = { mois: string; treso: number };
 export type VolumeScenario = { volume: string; net: number; current: boolean };
 
@@ -38,29 +39,32 @@ export const defaults = {
   volume: 24, mixEg: 70, rotation: 2, capital: 18000,
   statut: "SAS" as Statut, remun: 0, distrib: 0, apresVente: 0, cfe: 0,
   mode: "prudent" as Mode,
+  activite: "stock" as Activite, commission: 600, arce: 0, pretHonneur: 0,
 };
 export type Hypotheses = typeof defaults;
 
 export interface ModelResult {
-  ca: number; achats: number; margeBrute: number; tvaMarge: number; fraisVar: number;
+  courtage: boolean; ca: number; achats: number; margeBrute: number; tvaMarge: number; fraisVar: number;
   contribution: number; chargesFixesAn: number; excedent: number; chargesSoc: number;
   cotisMin: number; coutRemun: number; remunInsoutenable: boolean; ravis: number; is: number;
   netSoc: number; divBrut: number; divFisc: number; divNet: number; netConserve: number;
   revenuDirigeant: number; nAssoc: number; tMargeBrute: number; tContribution: number;
   tMargeNette: number; contribParVoiture: number; seuilAn: number; treso: TresoPoint[];
   pointBas: number; stockMoyen: number; bfrFinance: number; rotationStock: number; roi: number;
-  volScenarios: VolumeScenario[]; cEg: number; cCa: number;
+  ressources: number; financementOk: boolean; volScenarios: VolumeScenario[]; cEg: number; cCa: number;
 }
 
 // Fonction de calcul PURE (testable indépendamment de React)
 export function computeModel(s: Hypotheses): ModelResult {
+  const courtage = s.activite === "courtage";
   const mix = s.mixEg / 100;
   const volEg = s.volume * mix, volCa = s.volume * (1 - mix);
-  const ca = volEg * s.reventeEg + volCa * s.reventeCa;
-  const achats = volEg * s.achatEg + volCa * s.achatCa;
+  // En courtage : revenu = commissions, pas d'achat, pas de stock, pas de garantie portée
+  const ca = courtage ? s.commission * s.volume : volEg * s.reventeEg + volCa * s.reventeCa;
+  const achats = courtage ? 0 : volEg * s.achatEg + volCa * s.achatCa;
   const margeBrute = ca - achats;
-  const tvaMarge = margeBrute * TVA / (1 + TVA);
-  const fvUnit = s.prep + s.transport + s.garantie + s.petits + s.decote;
+  const tvaMarge = margeBrute * TVA / (1 + TVA); // courtage : TVA 20 % sur la commission (service)
+  const fvUnit = courtage ? s.transport + s.petits : s.prep + s.transport + s.garantie + s.petits + s.decote;
   const fraisVar = s.volume * fvUnit;
   const contribution = margeBrute - tvaMarge - fraisVar;
   const chargesFixesAn = (s.local + s.assur + s.autres) * 12;
@@ -68,24 +72,20 @@ export function computeModel(s: Hypotheses): ModelResult {
   const isSarl = s.statut === "SARL";
   const tauxSoc = isSarl ? SARL_SOC : SAS_SOC;
   const chargesSoc = s.remun * tauxSoc;
-  // SARL : plancher de cotisations minimales appliqué sur toute la plage de rémunérations faibles
   const cotisMin = isSarl ? Math.max(0, COTIS_MIN - chargesSoc) : 0;
   const coutRemun = s.remun + chargesSoc + cotisMin;
-  // Rémunération insoutenable : son coût total dépasse ce que l'activité dégage avant rémunération
   const remunInsoutenable = s.remun > 0 && coutRemun > Math.max(0, excedent);
   const ravis = excedent - s.remun - chargesSoc - cotisMin;
   const is = isTax(ravis);
   const netSoc = ravis - is;
   const divBrut = Math.max(0, netSoc) * (s.distrib / 100);
-  // Fiscalité dividendes : SAS/SASU = PFU 31,4 % ; SARL = PFU sous 10 % du capital,
-  // puis IR 12,8 % + cotisations TNS 45 % (qui REMPLACENT les prélèvements sociaux) au-delà.
   const seuilDiv = 0.1 * s.capital;
   const divBelow = Math.min(divBrut, seuilDiv);
   const divAbove = Math.max(0, divBrut - seuilDiv);
   const divFisc = isSarl ? divBelow * FLAT + divAbove * (PFU_IR + SARL_DIV) : divBrut * FLAT;
   const divNet = divBrut - divFisc;
   const netConserve = netSoc - divBrut;
-  const nAssoc = s.statut === "SASU" ? 1 : NB_ASSOCIES; // SASU = associé unique
+  const nAssoc = s.statut === "SASU" ? 1 : NB_ASSOCIES;
   const revenuDirigeant = s.remun + divNet / nAssoc;
   const tMargeBrute = ca ? margeBrute / ca : 0;
   const tContribution = ca ? contribution / ca : 0;
@@ -95,39 +95,43 @@ export function computeModel(s: Hypotheses): ModelResult {
   const wAchat = mix * s.achatEg + (1 - mix) * s.achatCa;
   const wRevente = mix * s.reventeEg + (1 - mix) * s.reventeCa;
   const mVol = s.volume / 12;
-  const achatsM = mVol * wAchat, ventesM = mVol * wRevente;
+  const achatsM = courtage ? 0 : mVol * wAchat;
+  const ventesM = courtage ? ca / 12 : mVol * wRevente;
   const p = s.apresVente / 100;
   const comptantM = achatsM * (1 - p), diffM = achatsM * p;
-  const fvM = mVol * fvUnit, tvaM = mVol * (wRevente - wAchat) * TVA / (1 + TVA);
+  const fvM = mVol * fvUnit;
+  const tvaM = courtage ? (ca / 12) * TVA / (1 + TVA) : mVol * (wRevente - wAchat) * TVA / (1 + TVA);
   const fixeM = s.local + s.assur + s.autres;
   const remunM = coutRemun / 12;
-  const lag = Math.max(0, Math.round(s.rotation));
-  const treso: TresoPoint[] = []; let prev = s.capital;
+  const lag = courtage ? 0 : Math.max(0, Math.round(s.rotation));
+  const ressources = s.capital + s.arce + s.pretHonneur;
+  const treso: TresoPoint[] = []; let prev = ressources;
   for (let i = 0; i < 12; i++) {
     const on = i >= lag;
     const fin = prev + (on ? ventesM : 0) - comptantM - (on ? diffM : 0) - (on ? fvM : 0) - (on ? tvaM : 0) - fixeM - remunM - (i === 11 ? s.cfe : 0);
     treso.push({ mois: "M" + (i + 1), treso: Math.round(fin) }); prev = fin;
   }
   const pointBas = Math.min(...treso.map((x) => x.treso));
-  const stockMoyen = achatsM * s.rotation;
+  const stockMoyen = courtage ? 0 : achatsM * s.rotation;
   const bfrFinance = stockMoyen * (1 - p);
   const rotationStock = stockMoyen ? achats / stockMoyen : 0;
   const roi = s.capital ? netSoc / s.capital : 0;
+  const financementOk = ressources >= bfrFinance;
   const cEg = (s.reventeEg - s.achatEg) - (s.reventeEg - s.achatEg) * TVA / (1 + TVA) - fvUnit;
   const cCa = (s.reventeCa - s.achatCa) - (s.reventeCa - s.achatCa) * TVA / (1 + TVA) - fvUnit;
-  // Le volume courant est toujours présent et mis en évidence, même hors palier
+  const cCom = s.commission - s.commission * TVA / (1 + TVA) - fvUnit; // contribution/affaire en courtage
   const vols = Array.from(new Set([12, 24, 36, 48, 60, s.volume])).sort((a, b) => a - b);
   const volScenarios: VolumeScenario[] = vols.map((v) => {
-    const cM = v * (mix * cEg + (1 - mix) * cCa);
+    const cM = courtage ? v * cCom : v * (mix * cEg + (1 - mix) * cCa);
     const rav = cM - chargesFixesAn - s.cfe - s.remun - chargesSoc - (isSarl ? Math.max(0, COTIS_MIN - s.remun * SARL_SOC) : 0);
     return { volume: v + "/an", net: Math.round(rav - isTax(rav)), current: v === s.volume };
   });
   return {
-    ca, achats, margeBrute, tvaMarge, fraisVar, contribution, chargesFixesAn,
+    courtage, ca, achats, margeBrute, tvaMarge, fraisVar, contribution, chargesFixesAn,
     excedent, chargesSoc, cotisMin, coutRemun, remunInsoutenable, ravis, is, netSoc,
     divBrut, divFisc, divNet, netConserve, revenuDirigeant, nAssoc, tMargeBrute,
     tContribution, tMargeNette, contribParVoiture, seuilAn, treso, pointBas, stockMoyen,
-    bfrFinance, rotationStock, roi, volScenarios, cEg, cCa,
+    bfrFinance, rotationStock, roi, ressources, financementOk, volScenarios, cEg, cCa,
   };
 }
 
@@ -136,13 +140,36 @@ export function isPresetIntact(s: Hypotheses): boolean {
   return PRESET_KEYS.every((k) => s[k] === PRESETS[s.mode][k]);
 }
 
+// --- Sauvegarde / partage : sérialisation de l'état dans l'URL (hash) + localStorage ---
+const STORAGE_KEY = "udc-sim-v1";
+export function encodeState(s: Hypotheses): string {
+  try { return btoa(encodeURIComponent(JSON.stringify(s))); } catch { return ""; }
+}
+export function decodeState(raw: string): Partial<Hypotheses> | null {
+  try { return JSON.parse(decodeURIComponent(atob(raw))); } catch { return null; }
+}
+function loadInitial(): Hypotheses {
+  if (typeof window === "undefined") return defaults;
+  const hash = window.location.hash.replace(/^#s=/, "");
+  if (hash) { const d = decodeState(hash); if (d) return { ...defaults, ...d }; }
+  try { const ls = localStorage.getItem(STORAGE_KEY); if (ls) return { ...defaults, ...JSON.parse(ls) }; } catch { /* ignore */ }
+  return defaults;
+}
+
 export function useSimulator() {
   const [s, setS] = useState<Hypotheses>(defaults);
+  // Hydratation client (URL/localStorage) après le rendu SSR pour éviter tout mismatch
+  useEffect(() => { setS(loadInitial()); }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+  }, [s]);
+
   const update = <K extends keyof Hypotheses>(k: K) => (v: Hypotheses[K]) =>
     setS((p) => ({ ...p, [k]: v }));
   const reset = () => setS(defaults);
-  // Bascule un préréglage de charges (prudent / réaliste) sans toucher aux prix ni au volume
   const setPreset = (mode: Mode) => setS((p) => ({ ...p, ...PRESETS[mode], mode }));
+  const shareLink = () => (typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}#s=${encodeState(s)}`);
   const m = useMemo(() => computeModel(s), [s]);
-  return { s, update, reset, setPreset, m, cashOk: m.pointBas >= 0, presetIntact: isPresetIntact(s) };
+  return { s, setS, update, reset, setPreset, shareLink, m, cashOk: m.pointBas >= 0, presetIntact: isPresetIntact(s) };
 }

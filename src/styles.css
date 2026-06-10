@@ -169,3 +169,27 @@
     color: var(--color-foreground);
   }
 }
+
+/* Impression / export PDF : on déroule le rapport en pleine page, sans navigation */
+@media print {
+  header {
+    position: static !important;
+    background: white !important;
+    backdrop-filter: none !important;
+  }
+  nav[aria-label="Sections du tableau de bord"],
+  nav[aria-label="Sections"],
+  aside {
+    display: none !important;
+  }
+  main {
+    grid-column: 1 / -1 !important;
+  }
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  * {
+    box-shadow: none !important;
+  }
+}

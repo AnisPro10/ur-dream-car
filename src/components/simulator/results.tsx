@@ -105,6 +105,12 @@ export function ResultsView({ sim }: { sim: Sim }) {
             <span>Rémunération non finançable : son coût total (<strong>{eur(m.coutRemun)}</strong>) dépasse ce que l'activité dégage. La société paierait un salaire qu'elle ne génère pas.</span>
           </div>
         )}
+        {!m.courtage && !m.financementOk && (
+          <div role="alert" className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>Besoin en fonds de roulement (<strong>{eur(m.bfrFinance)}</strong>) supérieur à vos ressources (<strong>{eur(m.ressources)}</strong> = capital + ARCE + prêt d'honneur). Ajoutez du capital, un prêt d'honneur, ou démarrez en courtage.</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Kpi icon={Coins} label="Résultat net société" value={eur(m.netSoc)} sub="après rémunération"
@@ -122,10 +128,10 @@ export function ResultsView({ sim }: { sim: Sim }) {
         <div className="grid lg:grid-cols-2 gap-5">
           <Card>
             <CardContent className="p-5">
-              <Row label="Chiffre d'affaires" value={eur(m.ca)} strong />
-              <Row label="− Coût d'achat" value={eur(-m.achats)} indent />
-              <Row label="Marge brute" value={eur(m.margeBrute)} strong />
-              <Row label="− TVA sur marge" value={eur(-m.tvaMarge)} indent />
+              <Row label={m.courtage ? "Commissions encaissées" : "Chiffre d'affaires"} value={eur(m.ca)} strong />
+              {!m.courtage && <Row label="− Coût d'achat" value={eur(-m.achats)} indent />}
+              {!m.courtage && <Row label="Marge brute" value={eur(m.margeBrute)} strong />}
+              <Row label={m.courtage ? "− TVA (20 % sur commission)" : "− TVA sur marge"} value={eur(-m.tvaMarge)} indent />
               <Row label="− Frais variables" value={eur(-m.fraisVar)} indent />
               <Row label="Contribution" value={eur(m.contribution)} strong />
               <Row label="− Charges fixes" value={eur(-m.chargesFixesAn)} indent />
@@ -152,13 +158,15 @@ export function ResultsView({ sim }: { sim: Sim }) {
             </Card>
             <Card>
               <CardContent className="p-5">
-                <div className="text-xs font-semibold uppercase tracking-wider text-primary mb-2">Ratios & BFR</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-primary mb-2">Ratios, BFR & financement</div>
                 <Row label="Taux de contribution" value={pct(m.tContribution)} />
-                <Row label="Seuil de rentabilité (charges fixes)" value={num(m.seuilAn / 12, 2) + " v./mois"} />
-                <Row label="Contribution / voiture" value={eur(m.contribParVoiture)} tone={m.contribParVoiture < 0 ? "bad" : undefined} />
-                <Row label="Stock moyen (valeur)" value={eur(m.stockMoyen)} />
-                <Row label="BFR financé par vous" value={eur(m.bfrFinance)} />
-                <Row label="Rotation du stock" value={num(m.rotationStock, 1) + " ×/an"} />
+                <Row label="Seuil de rentabilité (charges fixes)" value={num(m.seuilAn / 12, 2) + (m.courtage ? " mandats/mois" : " v./mois")} />
+                <Row label={m.courtage ? "Contribution / mandat" : "Contribution / voiture"} value={eur(m.contribParVoiture)} tone={m.contribParVoiture < 0 ? "bad" : undefined} />
+                {!m.courtage && <Row label="Stock moyen (valeur)" value={eur(m.stockMoyen)} />}
+                {!m.courtage && <Row label="Rotation du stock" value={num(m.rotationStock, 1) + " ×/an"} />}
+                <Row label="BFR à financer" value={m.courtage ? "0 € (sans stock)" : eur(m.bfrFinance)} tone={m.courtage ? "good" : undefined} />
+                <Row label="Ressources (capital + ARCE + prêt)" value={eur(m.ressources)} />
+                <Row label="Couverture du BFR" value={m.financementOk ? "Financé" : "Insuffisant"} tone={m.financementOk ? "good" : "bad"} accent />
                 <Row label="ROI du capital" value={pct(m.roi)} accent tone={m.roi < 0 ? "bad" : "good"} />
               </CardContent>
             </Card>

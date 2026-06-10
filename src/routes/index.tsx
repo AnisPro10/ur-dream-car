@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { LayoutDashboard, FileText, LineChart, BarChart3, Briefcase } from "lucide-react";
+import { LayoutDashboard, FileText, LineChart, BarChart3, Columns3, Briefcase, Link2, Check, Printer } from "lucide-react";
 import { useSimulator, eur } from "@/components/simulator/use-simulator";
 import { AssumptionsPanel } from "@/components/simulator/assumptions-panel";
 import { ResultsView } from "@/components/simulator/results";
+import { Comparison } from "@/components/simulator/comparison";
 import { BusinessModel } from "@/components/simulator/business-model";
 import { useScrollSpy, scrollToSection } from "@/components/simulator/use-scrollspy";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -25,8 +28,35 @@ const SECTIONS = [
   { id: "resultat", label: "Compte de résultat", icon: FileText },
   { id: "tresorerie", label: "Trésorerie", icon: LineChart },
   { id: "scenarios", label: "Scénarios", icon: BarChart3 },
+  { id: "comparaison", label: "Comparaison", icon: Columns3 },
   { id: "business", label: "Business & juridique", icon: Briefcase },
 ] as const;
+
+// Bouton de partage : copie un lien encodant l'état complet de la simulation
+function ShareBar({ shareLink }: { shareLink: () => string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      const url = shareLink();
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
+      else window.prompt("Copiez ce lien :", url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  };
+  return (
+    <div className="flex items-center gap-1.5 print:hidden">
+      <Button variant="outline" size="sm" onClick={copy} className="h-8 gap-1.5 text-xs" aria-live="polite">
+        {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Link2 className="h-3.5 w-3.5" />}
+        <span className="hidden sm:inline">{copied ? "Lien copié" : "Copier le lien"}</span>
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => window.print()} className="h-8 gap-1.5 text-xs">
+        <Printer className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Imprimer · PDF</span>
+      </Button>
+    </div>
+  );
+}
 
 function SimulatorPage() {
   const sim = useSimulator();
@@ -45,9 +75,11 @@ function SimulatorPage() {
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <Badge variant="secondary" className="hidden sm:inline-flex">Statut : {s.statut}</Badge>
-            <Badge variant="secondary">Mode : {modeLabel}</Badge>
+            <Badge variant="secondary" className="hidden sm:inline-flex">Mode : {modeLabel}</Badge>
             <Badge variant={m.netSoc > 0 ? "success" : "destructive"}>{eur(m.netSoc)}</Badge>
             <Badge variant={cashOk ? "success" : "destructive"} className="hidden md:inline-flex">Tréso {cashOk ? "OK" : "risque"}</Badge>
+            <span className="hidden sm:block w-px h-5 bg-border mx-1" aria-hidden="true" />
+            <ShareBar shareLink={sim.shareLink} />
           </div>
         </div>
       </header>
@@ -100,6 +132,13 @@ function SimulatorPage() {
         {/* Résultats (centre) */}
         <main className="min-w-0">
           <ResultsView sim={sim} />
+          <section id="comparaison" className="scroll-mt-28 mt-10">
+            <div className="mb-3">
+              <h3 className="font-serif text-lg font-semibold">Comparaison de scénarios</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Côte à côte, à hypothèses figées : choisissez la structure et la voie de démarrage.</p>
+            </div>
+            <Comparison s={sim.s} />
+          </section>
           <section id="business" className="scroll-mt-28 mt-10">
             <BusinessModel />
           </section>
