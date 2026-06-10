@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect } from "bun:test";
-import { computeModel, defaults, PRESETS, simulerRemuneration, encodeState, decodeState, type Hypotheses } from "./use-simulator";
+import { computeModel, defaults, PRESETS, simulerRemuneration, projeter3ans, encodeState, decodeState, type Hypotheses } from "./use-simulator";
 
 const approx = (a: number, b: number, tol = 1) => expect(Math.abs(a - b)).toBeLessThanOrEqual(tol);
 
@@ -213,6 +213,26 @@ test("nbAssocies : dividendes partages selon le nombre d'associes saisi", () => 
   const su = computeModel({ ...prof, statut: "SASU", nbAssocies: 5 });
   approx(su.nAssoc, 1);
   approx(su.revenuDirigeant, su.divNet);
+});
+
+// ---- ACRE : reduction des charges sociales annee 1 ----
+test("ACRE : charges sociales reduites de 50% (opts.acre)", () => {
+  const plein = computeModel({ ...defaults, statut: "SAS", remun: 10000 });
+  const acre = computeModel({ ...defaults, statut: "SAS", remun: 10000 }, { acre: 0.5 });
+  approx(plein.chargesSoc, 8000); // 10000 x 0,8
+  approx(acre.chargesSoc, 4000); // moitie avec ACRE
+  expect(acre.netSoc).toBeGreaterThan(plein.netSoc); // moins de charges -> meilleur resultat
+});
+
+// ---- Projection 3 ans : montee en charge, CFE des l'an 2, ACRE an 1 ----
+test("projeter3ans : volume monte, CFE 0 an1 puis due, ACRE an1", () => {
+  const p = projeter3ans({ ...defaults, croissance: 30, acre: true, cfe: 300 });
+  expect(p.length).toBe(3);
+  approx(p[0].volume, 24); approx(p[1].volume, 31); approx(p[2].volume, 41); // x1,3 par an
+  approx(p[0].cfe, 0); approx(p[1].cfe, 300); approx(p[2].cfe, 300); // exoneree an1
+  expect(p[0].acreActive).toBe(true);
+  expect(p[1].acreActive).toBe(false);
+  approx(p[0].netSoc, -5440); // an1 prudent SAS sans salaire = ancre connue
 });
 
 test("simulerRemuneration : plusieurs associes remuneres (cout x N)", () => {

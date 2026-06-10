@@ -248,6 +248,25 @@ export function AssumptionsPanel({ s, update, reset, setPreset, presetIntact }: 
           <NumberField label="Prêt d'honneur 0 %" value={s.pretHonneur} set={update("pretHonneur")} min={0} max={50000} step={1000} unit="€" hint="IDF : jusqu'à 25 000 €." />
         </Grid>
       </Section>
+
+      {/* 5 · Projection 3 ans */}
+      <Section title="Projection 3 ans" desc="Hypothèses de montée en charge utilisées par l'onglet Projection.">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+          <NumberField label="Croissance du volume / an" value={s.croissance} set={update("croissance")} min={-50} max={200} step={5} unit="% / an" hint="Ex. 30 % = volume ×1,3 chaque année." />
+          <div className="space-y-1">
+            <span className="block text-xs font-medium text-foreground/80">ACRE année 1</span>
+            <Segmented<"oui" | "non">
+              label="ACRE année 1" cols="grid-cols-2"
+              value={s.acre ? "oui" : "non"}
+              onChange={(v) => update("acre")(v === "oui")}
+              options={[{ v: "oui", label: "Activée" }, { v: "non", label: "Non" }]}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-snug sm:col-span-2 lg:col-span-1">
+            ACRE = exonération ~50 % des charges sociales la 1ʳᵉ année. La CFE est exonérée l'an 1 puis due dès l'an 2.
+          </p>
+        </div>
+      </Section>
     </div>
   );
 }

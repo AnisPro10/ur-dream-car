@@ -44,6 +44,8 @@ export type Hypotheses = {
   activite: Activite; commission: number; arce: number; pretHonneur: number;
   // Profil de la société : synchronisé partout (démarrage, hypothèses, juridique, financier)
   nbAssocies: number; dirigeantPrenom: string; dirigeantNom: string;
+  // Projection pluriannuelle
+  croissance: number; acre: boolean;
 };
 
 export const defaults: Hypotheses = {
@@ -54,6 +56,7 @@ export const defaults: Hypotheses = {
   mode: "prudent",
   activite: "stock", commission: 600, arce: 0, pretHonneur: 0,
   nbAssocies: NB_ASSOCIES, dirigeantPrenom: "", dirigeantNom: "",
+  croissance: 30, acre: true,
 };
 
 // SASU = unipersonnelle : toujours 1 associé, quel que soit le nombre saisi.
@@ -72,8 +75,10 @@ export interface ModelResult {
 }
 
 // Fonction de calcul PURE (testable indépendamment de React)
-export function computeModel(s: Hypotheses): ModelResult {
+// opts.acre : réduction des charges sociales (0 = aucune ; 0,5 = ACRE année 1).
+export function computeModel(s: Hypotheses, opts: { acre?: number } = {}): ModelResult {
   const courtage = s.activite === "courtage";
+  const acreF = 1 - (opts.acre ?? 0);
   const mix = s.mixEg / 100;
   const volEg = s.volume * mix, volCa = s.volume * (1 - mix);
   // En courtage : revenu = commissions, pas d'achat, pas de stock, pas de garantie portée
@@ -88,8 +93,8 @@ export function computeModel(s: Hypotheses): ModelResult {
   const excedent = contribution - chargesFixesAn - s.cfe;
   const isSarl = s.statut === "SARL";
   const tauxSoc = isSarl ? SARL_SOC : SAS_SOC;
-  const chargesSoc = s.remun * tauxSoc;
-  const cotisMin = isSarl ? Math.max(0, COTIS_MIN - chargesSoc) : 0;
+  const chargesSoc = s.remun * tauxSoc * acreF;
+  const cotisMin = isSarl ? Math.max(0, COTIS_MIN * acreF - chargesSoc) : 0;
   const coutRemun = s.remun + chargesSoc + cotisMin;
   const remunInsoutenable = s.remun > 0 && coutRemun > Math.max(0, excedent);
   const ravis = excedent - s.remun - chargesSoc - cotisMin;
@@ -209,6 +214,34 @@ export function simulerRemuneration(
   };
 }
 
+// --- Projection sur 3 ans : montée en charge du volume, CFE dès l'an 2, ACRE an 1 ---
+export interface AnneeProjection {
+  annee: number; volume: number; ca: number; contribution: number; netSoc: number;
+  revenuDirigeant: number; cfe: number; acreActive: boolean; tresoCumulee: number;
+}
+
+export function projeter3ans(s: Hypotheses): AnneeProjection[] {
+  const g = 1 + s.croissance / 100;
+  // CFE exonérée l'année de création, due ensuite (estimation 300 € si non saisie).
+  const cfeBase = s.cfe > 0 ? s.cfe : 300;
+  let tresoCumulee = s.capital + s.arce + s.pretHonneur; // ressources de départ
+  const out: AnneeProjection[] = [];
+  for (let y = 1; y <= 3; y++) {
+    const volume = Math.max(0, Math.round(s.volume * Math.pow(g, y - 1)));
+    const cfe = y === 1 ? 0 : cfeBase;
+    const acreY = y === 1 && s.acre ? 0.5 : 0;
+    const m = computeModel({ ...s, volume, cfe }, { acre: acreY });
+    // Trésorerie cumulée (indicative) : ressources + résultat conservé chaque année
+    // (les dividendes distribués sortent de la société). Hors BFR/amortissement/décalage TVA.
+    tresoCumulee += m.netConserve;
+    out.push({
+      annee: y, volume, ca: m.ca, contribution: m.contribution, netSoc: m.netSoc,
+      revenuDirigeant: m.revenuDirigeant, cfe, acreActive: acreY > 0, tresoCumulee,
+    });
+  }
+  return out;
+}
+
 // --- Sauvegarde / partage : sérialisation de l'état dans l'URL (hash) + localStorage ---
 const STORAGE_KEY = "udc-sim-v1";
 
@@ -233,6 +266,7 @@ const hypothesesSchema = z.object({
   arce: numFini.min(0).max(10_000_000), pretHonneur: numFini.min(0).max(10_000_000),
   nbAssocies: numFini.min(1).max(10),
   dirigeantPrenom: z.string().trim().max(60), dirigeantNom: z.string().trim().max(60),
+  croissance: numFini.min(-100).max(300), acre: z.boolean(),
 }).partial();
 
 function safe(parsed: unknown): Partial<Hypotheses> | null {

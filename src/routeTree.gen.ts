@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TresorerieRouteImport } from './routes/tresorerie'
 import { Route as SyntheseRouteImport } from './routes/synthese'
 import { Route as ScenariosRouteImport } from './routes/scenarios'
+import { Route as ProjectionRouteImport } from './routes/projection'
 import { Route as HypothesesRouteImport } from './routes/hypotheses'
 import { Route as DictionnaireRouteImport } from './routes/dictionnaire'
 import { Route as DemarrageRouteImport } from './routes/demarrage'
@@ -34,6 +35,11 @@ const SyntheseRoute = SyntheseRouteImport.update({
 const ScenariosRoute = ScenariosRouteImport.update({
   id: '/scenarios',
   path: '/scenarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectionRoute = ProjectionRouteImport.update({
+  id: '/projection',
+  path: '/projection',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HypothesesRoute = HypothesesRouteImport.update({
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/demarrage': typeof DemarrageRoute
   '/dictionnaire': typeof DictionnaireRoute
   '/hypotheses': typeof HypothesesRoute
+  '/projection': typeof ProjectionRoute
   '/scenarios': typeof ScenariosRoute
   '/synthese': typeof SyntheseRoute
   '/tresorerie': typeof TresorerieRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/demarrage': typeof DemarrageRoute
   '/dictionnaire': typeof DictionnaireRoute
   '/hypotheses': typeof HypothesesRoute
+  '/projection': typeof ProjectionRoute
   '/scenarios': typeof ScenariosRoute
   '/synthese': typeof SyntheseRoute
   '/tresorerie': typeof TresorerieRoute
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/demarrage': typeof DemarrageRoute
   '/dictionnaire': typeof DictionnaireRoute
   '/hypotheses': typeof HypothesesRoute
+  '/projection': typeof ProjectionRoute
   '/scenarios': typeof ScenariosRoute
   '/synthese': typeof SyntheseRoute
   '/tresorerie': typeof TresorerieRoute
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/demarrage'
     | '/dictionnaire'
     | '/hypotheses'
+    | '/projection'
     | '/scenarios'
     | '/synthese'
     | '/tresorerie'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/demarrage'
     | '/dictionnaire'
     | '/hypotheses'
+    | '/projection'
     | '/scenarios'
     | '/synthese'
     | '/tresorerie'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/demarrage'
     | '/dictionnaire'
     | '/hypotheses'
+    | '/projection'
     | '/scenarios'
     | '/synthese'
     | '/tresorerie'
@@ -167,6 +179,7 @@ export interface RootRouteChildren {
   DemarrageRoute: typeof DemarrageRoute
   DictionnaireRoute: typeof DictionnaireRoute
   HypothesesRoute: typeof HypothesesRoute
+  ProjectionRoute: typeof ProjectionRoute
   ScenariosRoute: typeof ScenariosRoute
   SyntheseRoute: typeof SyntheseRoute
   TresorerieRoute: typeof TresorerieRoute
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/scenarios'
       fullPath: '/scenarios'
       preLoaderRoute: typeof ScenariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projection': {
+      id: '/projection'
+      path: '/projection'
+      fullPath: '/projection'
+      preLoaderRoute: typeof ProjectionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hypotheses': {
@@ -263,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemarrageRoute: DemarrageRoute,
   DictionnaireRoute: DictionnaireRoute,
   HypothesesRoute: HypothesesRoute,
+  ProjectionRoute: ProjectionRoute,
   ScenariosRoute: ScenariosRoute,
   SyntheseRoute: SyntheseRoute,
   TresorerieRoute: TresorerieRoute,
