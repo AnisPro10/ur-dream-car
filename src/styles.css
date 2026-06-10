@@ -170,6 +170,46 @@
   }
 }
 
+/* Landing : révélations au chargement + motifs automobile (thème simulateur) */
+@keyframes udc-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes udc-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes udc-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes udc-drift {
+  0% { transform: translateX(-4%); }
+  100% { transform: translateX(4%); }
+}
+@keyframes udc-dash {
+  to { stroke-dashoffset: -240; }
+}
+.udc-reveal { opacity: 0; animation: udc-fade-up 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+.udc-reveal-soft { opacity: 0; animation: udc-fade 1.2s ease forwards; }
+.udc-float { animation: udc-float 6s ease-in-out infinite; }
+.udc-drift { animation: udc-drift 14s ease-in-out infinite alternate; }
+.udc-dash { stroke-dasharray: 18 22; animation: udc-dash 6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .udc-reveal, .udc-reveal-soft { opacity: 1; animation: none; }
+  .udc-float, .udc-drift, .udc-dash { animation: none; }
+}
+/* Grain léger pour la profondeur (data-URI, sans requête réseau) */
+.udc-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 /* Impression / export PDF : on déroule le rapport en pleine page, sans navigation */
 @media print {
   header {

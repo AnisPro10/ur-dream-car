@@ -122,6 +122,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function SimulatorShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // La landing (/) s'affiche en pleine page, hors chrome du simulateur.
+  if (pathname === "/") return <Outlet />;
   const isHypotheses = pathname === "/hypotheses";
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">

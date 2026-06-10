@@ -1,20 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SyntheseView } from "@/components/simulator/results";
-import { useSim } from "@/components/simulator/simulator-context";
+import { LandingPage } from "@/components/landing/landing-page";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Synthèse — Simulateur négoce VO" },
-      { name: "description", content: "Vue d'ensemble : résultat net société, revenu dirigeant, marge nette et point bas de trésorerie." },
-      { property: "og:title", content: "Synthèse — Simulateur négoce VO" },
-      { property: "og:description", content: "Indicateurs clés du projet de négoce de véhicules d'occasion." },
+      { title: "Négoce de véhicules d'occasion — Confiance & garantie en Île-de-France" },
+      { name: "description", content: "Achat-revente de véhicules d'occasion vérifiés en Île-de-France : papiers en règle, contrôle expliqué, accompagnement. Accédez au simulateur financier du projet." },
+      { property: "og:title", content: "Négoce de véhicules d'occasion — Confiance & garantie" },
+      { property: "og:description", content: "Occasion vérifiée, papiers en règle, accompagnement. Et un simulateur financier complet : marge, trésorerie, fiscalité, scénarios." },
+      { property: "og:type", content: "website" },
     ],
   }),
-  component: SynthesePage,
+  component: LandingPage,
 });
-
-function SynthesePage() {
-  const sim = useSim();
-  return <SyntheseView sim={sim} />;
-}

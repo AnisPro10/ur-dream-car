@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TresorerieRouteImport } from './routes/tresorerie'
+import { Route as SyntheseRouteImport } from './routes/synthese'
 import { Route as ScenariosRouteImport } from './routes/scenarios'
 import { Route as HypothesesRouteImport } from './routes/hypotheses'
 import { Route as CompteResultatRouteImport } from './routes/compte-resultat'
@@ -21,6 +22,11 @@ import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 const TresorerieRoute = TresorerieRouteImport.update({
   id: '/tresorerie',
   path: '/tresorerie',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SyntheseRoute = SyntheseRouteImport.update({
+  id: '/synthese',
+  path: '/synthese',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScenariosRoute = ScenariosRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/compte-resultat': typeof CompteResultatRoute
   '/hypotheses': typeof HypothesesRoute
   '/scenarios': typeof ScenariosRoute
+  '/synthese': typeof SyntheseRoute
   '/tresorerie': typeof TresorerieRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/compte-resultat': typeof CompteResultatRoute
   '/hypotheses': typeof HypothesesRoute
   '/scenarios': typeof ScenariosRoute
+  '/synthese': typeof SyntheseRoute
   '/tresorerie': typeof TresorerieRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/compte-resultat': typeof CompteResultatRoute
   '/hypotheses': typeof HypothesesRoute
   '/scenarios': typeof ScenariosRoute
+  '/synthese': typeof SyntheseRoute
   '/tresorerie': typeof TresorerieRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/compte-resultat'
     | '/hypotheses'
     | '/scenarios'
+    | '/synthese'
     | '/tresorerie'
     | '/api/public/health'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/compte-resultat'
     | '/hypotheses'
     | '/scenarios'
+    | '/synthese'
     | '/tresorerie'
     | '/api/public/health'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/compte-resultat'
     | '/hypotheses'
     | '/scenarios'
+    | '/synthese'
     | '/tresorerie'
     | '/api/public/health'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   CompteResultatRoute: typeof CompteResultatRoute
   HypothesesRoute: typeof HypothesesRoute
   ScenariosRoute: typeof ScenariosRoute
+  SyntheseRoute: typeof SyntheseRoute
   TresorerieRoute: typeof TresorerieRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
 }
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/tresorerie'
       fullPath: '/tresorerie'
       preLoaderRoute: typeof TresorerieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/synthese': {
+      id: '/synthese'
+      path: '/synthese'
+      fullPath: '/synthese'
+      preLoaderRoute: typeof SyntheseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scenarios': {
@@ -202,9 +222,20 @@ const rootRouteChildren: RootRouteChildren = {
   CompteResultatRoute: CompteResultatRoute,
   HypothesesRoute: HypothesesRoute,
   ScenariosRoute: ScenariosRoute,
+  SyntheseRoute: SyntheseRoute,
   TresorerieRoute: TresorerieRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

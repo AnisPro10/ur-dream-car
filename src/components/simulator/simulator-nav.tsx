@@ -14,7 +14,7 @@ import { HealthIndicator } from "./health-indicator";
 // Hypothèses en tête : on saisit puis on consulte chaque rubrique.
 export const NAV_ITEMS = [
   { to: "/hypotheses", label: "Hypothèses", icon: SlidersHorizontal },
-  { to: "/", label: "Synthèse", icon: LayoutDashboard, exact: true as const },
+  { to: "/synthese", label: "Synthèse", icon: LayoutDashboard, exact: true as const },
   { to: "/compte-resultat", label: "Compte de résultat", icon: FileText },
   { to: "/tresorerie", label: "Trésorerie", icon: LineChart },
   { to: "/scenarios", label: "Scénarios", icon: BarChart3 },
@@ -55,10 +55,10 @@ export function SimulatorHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="max-w-[1500px] mx-auto px-5 h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <Link to="/" className="flex items-center gap-2.5 min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Retour à l'accueil">
           <span className="text-[10px] uppercase tracking-[0.18em] text-primary font-semibold hidden sm:inline">Simulateur</span>
           <h1 className="font-serif text-base font-semibold truncate">Négoce de véhicules d'occasion</h1>
-        </div>
+        </Link>
         <div className="flex items-center gap-1.5 shrink-0">
           <Badge variant="secondary" className="hidden sm:inline-flex">Statut : {s.statut}</Badge>
           <Badge variant="secondary" className="hidden sm:inline-flex">Mode : {modeLabel}</Badge>
