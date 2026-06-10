@@ -2,7 +2,7 @@ import {
   BarChart, Bar, Cell, CartesianGrid, LineChart, Line, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { TrendingDown, TrendingUp, Wallet, Coins, Percent } from "lucide-react";
+import { TrendingDown, TrendingUp, Wallet, Coins, Percent, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { eur, num, pct } from "./use-simulator";
@@ -51,7 +51,7 @@ function Row({
   );
 }
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload || !payload.length) return null;
   const value = payload[0].value;
   if (value == null) return null;
@@ -79,6 +79,16 @@ export function ResultsView({ sim }: { sim: Sim }) {
           <span>
             Trésorerie négative en cours d'année (point bas <strong>{eur(m.pointBas)}</strong>).
             Augmentez le capital, réduisez le volume, accélérez la rotation ou activez le paiement après-vente.
+          </span>
+        </div>
+      )}
+
+      {m.remunInsoutenable && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            Rémunération non finançable : son coût total (<strong>{eur(m.coutRemun)}</strong>) dépasse ce que l'activité dégage.
+            La société paie un salaire qu'elle ne génère pas — elle se finance sur le capital ou la dette.
           </span>
         </div>
       )}
