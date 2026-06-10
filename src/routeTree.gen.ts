@@ -9,9 +9,45 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TresorerieRouteImport } from './routes/tresorerie'
+import { Route as ScenariosRouteImport } from './routes/scenarios'
+import { Route as HypothesesRouteImport } from './routes/hypotheses'
+import { Route as CompteResultatRouteImport } from './routes/compte-resultat'
+import { Route as ComparaisonRouteImport } from './routes/comparaison'
+import { Route as BusinessRouteImport } from './routes/business'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 
+const TresorerieRoute = TresorerieRouteImport.update({
+  id: '/tresorerie',
+  path: '/tresorerie',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScenariosRoute = ScenariosRouteImport.update({
+  id: '/scenarios',
+  path: '/scenarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HypothesesRoute = HypothesesRouteImport.update({
+  id: '/hypotheses',
+  path: '/hypotheses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompteResultatRoute = CompteResultatRouteImport.update({
+  id: '/compte-resultat',
+  path: '/compte-resultat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComparaisonRoute = ComparaisonRouteImport.update({
+  id: '/comparaison',
+  path: '/comparaison',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessRoute = BusinessRouteImport.update({
+  id: '/business',
+  path: '/business',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +61,123 @@ const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/business': typeof BusinessRoute
+  '/comparaison': typeof ComparaisonRoute
+  '/compte-resultat': typeof CompteResultatRoute
+  '/hypotheses': typeof HypothesesRoute
+  '/scenarios': typeof ScenariosRoute
+  '/tresorerie': typeof TresorerieRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/business': typeof BusinessRoute
+  '/comparaison': typeof ComparaisonRoute
+  '/compte-resultat': typeof CompteResultatRoute
+  '/hypotheses': typeof HypothesesRoute
+  '/scenarios': typeof ScenariosRoute
+  '/tresorerie': typeof TresorerieRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/business': typeof BusinessRoute
+  '/comparaison': typeof ComparaisonRoute
+  '/compte-resultat': typeof CompteResultatRoute
+  '/hypotheses': typeof HypothesesRoute
+  '/scenarios': typeof ScenariosRoute
+  '/tresorerie': typeof TresorerieRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/health'
+  fullPaths:
+    | '/'
+    | '/business'
+    | '/comparaison'
+    | '/compte-resultat'
+    | '/hypotheses'
+    | '/scenarios'
+    | '/tresorerie'
+    | '/api/public/health'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/health'
-  id: '__root__' | '/' | '/api/public/health'
+  to:
+    | '/'
+    | '/business'
+    | '/comparaison'
+    | '/compte-resultat'
+    | '/hypotheses'
+    | '/scenarios'
+    | '/tresorerie'
+    | '/api/public/health'
+  id:
+    | '__root__'
+    | '/'
+    | '/business'
+    | '/comparaison'
+    | '/compte-resultat'
+    | '/hypotheses'
+    | '/scenarios'
+    | '/tresorerie'
+    | '/api/public/health'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BusinessRoute: typeof BusinessRoute
+  ComparaisonRoute: typeof ComparaisonRoute
+  CompteResultatRoute: typeof CompteResultatRoute
+  HypothesesRoute: typeof HypothesesRoute
+  ScenariosRoute: typeof ScenariosRoute
+  TresorerieRoute: typeof TresorerieRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tresorerie': {
+      id: '/tresorerie'
+      path: '/tresorerie'
+      fullPath: '/tresorerie'
+      preLoaderRoute: typeof TresorerieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scenarios': {
+      id: '/scenarios'
+      path: '/scenarios'
+      fullPath: '/scenarios'
+      preLoaderRoute: typeof ScenariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hypotheses': {
+      id: '/hypotheses'
+      path: '/hypotheses'
+      fullPath: '/hypotheses'
+      preLoaderRoute: typeof HypothesesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compte-resultat': {
+      id: '/compte-resultat'
+      path: '/compte-resultat'
+      fullPath: '/compte-resultat'
+      preLoaderRoute: typeof CompteResultatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/comparaison': {
+      id: '/comparaison'
+      path: '/comparaison'
+      fullPath: '/comparaison'
+      preLoaderRoute: typeof ComparaisonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business': {
+      id: '/business'
+      path: '/business'
+      fullPath: '/business'
+      preLoaderRoute: typeof BusinessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +197,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BusinessRoute: BusinessRoute,
+  ComparaisonRoute: ComparaisonRoute,
+  CompteResultatRoute: CompteResultatRoute,
+  HypothesesRoute: HypothesesRoute,
+  ScenariosRoute: ScenariosRoute,
+  TresorerieRoute: TresorerieRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
 }
 export const routeTree = rootRouteImport
