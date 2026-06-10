@@ -33,15 +33,24 @@ export const PRESETS = {
 } as const;
 export const PRESET_KEYS = Object.keys(PRESETS.prudent) as (keyof typeof PRESETS.prudent)[];
 
-export const defaults = {
+export type Hypotheses = {
+  achatEg: number; reventeEg: number; achatCa: number; reventeCa: number;
+  prep: number; transport: number; garantie: number; petits: number; decote: number;
+  local: number; assur: number; autres: number;
+  volume: number; mixEg: number; rotation: number; capital: number;
+  statut: Statut; remun: number; distrib: number; apresVente: number; cfe: number;
+  mode: Mode;
+  activite: Activite; commission: number; arce: number; pretHonneur: number;
+};
+
+export const defaults: Hypotheses = {
   achatEg: 4000, reventeEg: 5000, achatCa: 8000, reventeCa: 9500,
   ...PRESETS.prudent,
   volume: 24, mixEg: 70, rotation: 2, capital: 18000,
-  statut: "SAS" as Statut, remun: 0, distrib: 0, apresVente: 0, cfe: 0,
-  mode: "prudent" as Mode,
-  activite: "stock" as Activite, commission: 600, arce: 0, pretHonneur: 0,
+  statut: "SAS", remun: 0, distrib: 0, apresVente: 0, cfe: 0,
+  mode: "prudent",
+  activite: "stock", commission: 600, arce: 0, pretHonneur: 0,
 };
-export type Hypotheses = typeof defaults;
 
 export interface ModelResult {
   courtage: boolean; ca: number; achats: number; margeBrute: number; tvaMarge: number; fraisVar: number;
