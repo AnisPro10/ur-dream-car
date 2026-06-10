@@ -6,6 +6,7 @@ import { AssumptionsPanel } from "@/components/simulator/assumptions-panel";
 import { ResultsView } from "@/components/simulator/results";
 import { Comparison } from "@/components/simulator/comparison";
 import { BusinessModel } from "@/components/simulator/business-model";
+import { HealthIndicator } from "@/components/simulator/health-indicator";
 import { useScrollSpy, scrollToSection } from "@/components/simulator/use-scrollspy";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ function SimulatorPage() {
             <Badge variant="secondary" className="hidden sm:inline-flex">Mode : {modeLabel}</Badge>
             <Badge variant={m.netSoc > 0 ? "success" : "destructive"}>{eur(m.netSoc)}</Badge>
             <Badge variant={cashOk ? "success" : "destructive"} className="hidden md:inline-flex">Tréso {cashOk ? "OK" : "risque"}</Badge>
+            <HealthIndicator />
             <span className="hidden sm:block w-px h-5 bg-border mx-1" aria-hidden="true" />
             <ShareBar shareLink={sim.shareLink} />
           </div>
