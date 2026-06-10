@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   SlidersHorizontal, LayoutDashboard, FileText, LineChart, BarChart3,
-  Columns3, Briefcase, Link2, Check, Printer, Rocket, BookOpenText, CalendarRange,
+  Columns3, Briefcase, Link2, Check, Printer, Rocket, BookOpenText, CalendarRange, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { eur } from "./use-simulator";
 import { useSim } from "./simulator-context";
 import { HealthIndicator } from "./health-indicator";
 import { ThemeToggle } from "./theme-toggle";
+import { downloadCsv } from "./export-csv";
 
 // Hypothèses en tête : on saisit puis on consulte chaque rubrique.
 export const NAV_ITEMS = [
@@ -27,11 +28,11 @@ export const NAV_ITEMS = [
 ] as const;
 
 function ShareBar() {
-  const { shareLink } = useSim();
+  const sim = useSim();
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
-      const url = shareLink();
+      const url = sim.shareLink();
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
       else window.prompt("Copiez ce lien :", url);
       setCopied(true);
@@ -42,11 +43,15 @@ function ShareBar() {
     <div className="flex items-center gap-1.5 print:hidden">
       <Button variant="outline" size="sm" onClick={copy} className="h-8 gap-1.5 text-xs" aria-live="polite">
         {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Link2 className="h-3.5 w-3.5" />}
-        <span className="hidden sm:inline">{copied ? "Lien copié" : "Copier le lien"}</span>
+        <span className="hidden lg:inline">{copied ? "Lien copié" : "Copier le lien"}</span>
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => downloadCsv(sim)} className="h-8 gap-1.5 text-xs" title="Exporter en CSV (Excel)">
+        <Download className="h-3.5 w-3.5" />
+        <span className="hidden lg:inline">Export Excel</span>
       </Button>
       <Button variant="outline" size="sm" onClick={() => window.print()} className="h-8 gap-1.5 text-xs">
         <Printer className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Imprimer · PDF</span>
+        <span className="hidden lg:inline">Imprimer · PDF</span>
       </Button>
     </div>
   );

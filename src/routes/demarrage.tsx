@@ -3,6 +3,7 @@ import { ArrowRight, Building2, Users, UserRound } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberField, TextField } from "@/components/simulator/assumptions-panel";
+import { ScenarioManager } from "@/components/simulator/scenario-manager";
 import { useSim } from "@/components/simulator/simulator-context";
 import { nbAssociesEffectif, type Statut } from "@/components/simulator/use-simulator";
 import { cn } from "@/lib/utils";
@@ -113,6 +114,8 @@ function DemarragePage() {
           )}
         </CardContent>
       </Card>
+
+      <ScenarioManager />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button size="lg" className="gap-2" onClick={() => navigate({ to: "/synthese" })}>

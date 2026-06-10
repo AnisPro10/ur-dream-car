@@ -305,6 +305,8 @@ export function useSimulator() {
   );
   const reset = useCallback(() => setS(defaults), []);
   const setPreset = useCallback((mode: Mode) => setS((p) => ({ ...p, ...PRESETS[mode], mode })), []);
+  // Remplace tout l'état (chargement d'un scénario nommé), en repartant des défauts.
+  const loadAll = useCallback((h: Partial<Hypotheses>) => setS({ ...defaults, ...h }), []);
   // shareLink dépend de s (sinon lien partagé périmé) → deps [s].
   const shareLink = useCallback(
     () => (typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}#s=${encodeState(s)}`),
@@ -312,7 +314,7 @@ export function useSimulator() {
   );
   const m = useMemo(() => computeModel(s), [s]);
   return useMemo(
-    () => ({ s, update, reset, setPreset, shareLink, m, cashOk: m.pointBas >= 0, presetIntact: isPresetIntact(s) }),
-    [s, m, update, reset, setPreset, shareLink],
+    () => ({ s, update, reset, setPreset, loadAll, shareLink, m, cashOk: m.pointBas >= 0, presetIntact: isPresetIntact(s) }),
+    [s, m, update, reset, setPreset, loadAll, shareLink],
   );
 }
