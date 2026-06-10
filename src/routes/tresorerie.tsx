@@ -1,6 +1,11 @@
+import { lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { TresorerieView } from "@/components/simulator/results";
 import { useSim } from "@/components/simulator/simulator-context";
+
+// Chargé en lazy : recharts (~115 kB gzip) n'est téléchargé qu'en ouvrant cette page.
+const TresorerieView = lazy(() =>
+  import("@/components/simulator/results-charts").then((m) => ({ default: m.TresorerieView })),
+);
 
 export const Route = createFileRoute("/tresorerie")({
   head: () => ({
@@ -11,5 +16,14 @@ export const Route = createFileRoute("/tresorerie")({
       { property: "og:description", content: "Suivi mensuel de la trésorerie et point bas annuel." },
     ],
   }),
-  component: () => <TresorerieView sim={useSim()} />,
+  component: TresoreriePage,
 });
+
+function TresoreriePage() {
+  const sim = useSim();
+  return (
+    <Suspense fallback={<div className="h-72 animate-pulse rounded-lg bg-muted/40" />}>
+      <TresorerieView sim={sim} />
+    </Suspense>
+  );
+}

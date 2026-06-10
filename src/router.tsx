@@ -9,6 +9,8 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    // Précharge le chunk d'une route au survol du lien (masque le lazy-load des graphes).
+    defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
   });
 

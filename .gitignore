@@ -16,6 +16,11 @@ dist-ssr
 .nitro
 *.local
 
+# Variables d'environnement (ne JAMAIS versionner de secret ; .env.example documente les clés)
+.env
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

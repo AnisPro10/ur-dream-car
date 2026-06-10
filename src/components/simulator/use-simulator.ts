@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 
 export const TVA = 0.2;
 export const SAS_SOC = 0.8; // SAS/SASU : charges sociales ~80 % du net (assimilé salarié)
@@ -187,17 +188,44 @@ export function simulerRemuneration(
 
 // --- Sauvegarde / partage : sérialisation de l'état dans l'URL (hash) + localStorage ---
 const STORAGE_KEY = "udc-sim-v1";
+
+// Un état chargé depuis l'URL (#s=) ou localStorage peut être périmé, corrompu ou
+// forgé. Sans validation, un champ non numérique (ex. volume:"abc") propagerait des
+// NaN dans tout le modèle et rendrait l'app inutilisable. zod coerce + borne chaque
+// champ ; toute entrée invalide est ignorée et l'on retombe sur les valeurs par défaut.
+const numFini = z.coerce.number().finite();
+const hypothesesSchema = z.object({
+  achatEg: numFini.min(0).max(1_000_000), reventeEg: numFini.min(0).max(1_000_000),
+  achatCa: numFini.min(0).max(1_000_000), reventeCa: numFini.min(0).max(1_000_000),
+  prep: numFini.min(0).max(100_000), transport: numFini.min(0).max(100_000),
+  garantie: numFini.min(0).max(100_000), petits: numFini.min(0).max(100_000),
+  decote: numFini.min(0).max(100_000), local: numFini.min(0).max(1_000_000),
+  assur: numFini.min(0).max(1_000_000), autres: numFini.min(0).max(1_000_000),
+  volume: numFini.min(0).max(100_000), mixEg: numFini.min(0).max(100),
+  rotation: numFini.min(0).max(60), capital: numFini.min(0).max(100_000_000),
+  statut: z.enum(["SAS", "SASU", "SARL"]), remun: numFini.min(0).max(10_000_000),
+  distrib: numFini.min(0).max(100), apresVente: numFini.min(0).max(100),
+  cfe: numFini.min(0).max(1_000_000), mode: z.enum(["prudent", "realiste"]),
+  activite: z.enum(["stock", "courtage"]), commission: numFini.min(0).max(1_000_000),
+  arce: numFini.min(0).max(10_000_000), pretHonneur: numFini.min(0).max(10_000_000),
+}).partial();
+
+function safe(parsed: unknown): Partial<Hypotheses> | null {
+  const r = hypothesesSchema.safeParse(parsed);
+  return r.success ? r.data : null;
+}
+
 export function encodeState(s: Hypotheses): string {
   try { return btoa(encodeURIComponent(JSON.stringify(s))); } catch { return ""; }
 }
 export function decodeState(raw: string): Partial<Hypotheses> | null {
-  try { return JSON.parse(decodeURIComponent(atob(raw))); } catch { return null; }
+  try { return safe(JSON.parse(decodeURIComponent(atob(raw)))); } catch { return null; }
 }
 function loadInitial(): Hypotheses {
   if (typeof window === "undefined") return defaults;
   const hash = window.location.hash.replace(/^#s=/, "");
   if (hash) { const d = decodeState(hash); if (d) return { ...defaults, ...d }; }
-  try { const ls = localStorage.getItem(STORAGE_KEY); if (ls) return { ...defaults, ...JSON.parse(ls) }; } catch { /* ignore */ }
+  try { const ls = localStorage.getItem(STORAGE_KEY); if (ls) { const d = safe(JSON.parse(ls)); if (d) return { ...defaults, ...d }; } } catch { /* ignore */ }
   return defaults;
 }
 
@@ -210,11 +238,22 @@ export function useSimulator() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
   }, [s]);
 
-  const update = <K extends keyof Hypotheses>(k: K) => (v: Hypotheses[K]) =>
-    setS((p) => ({ ...p, [k]: v }));
-  const reset = () => setS(defaults);
-  const setPreset = (mode: Mode) => setS((p) => ({ ...p, ...PRESETS[mode], mode }));
-  const shareLink = () => (typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}#s=${encodeState(s)}`);
+  // Callbacks stables (deps []) : sinon la value du contexte change à chaque frappe
+  // et re-rend tous les consommateurs (header, nav, panneau de 20 champs).
+  const update = useCallback(
+    <K extends keyof Hypotheses>(k: K) => (v: Hypotheses[K]) => setS((p) => ({ ...p, [k]: v })),
+    [],
+  );
+  const reset = useCallback(() => setS(defaults), []);
+  const setPreset = useCallback((mode: Mode) => setS((p) => ({ ...p, ...PRESETS[mode], mode })), []);
+  // shareLink dépend de s (sinon lien partagé périmé) → deps [s].
+  const shareLink = useCallback(
+    () => (typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}#s=${encodeState(s)}`),
+    [s],
+  );
   const m = useMemo(() => computeModel(s), [s]);
-  return { s, setS, update, reset, setPreset, shareLink, m, cashOk: m.pointBas >= 0, presetIntact: isPresetIntact(s) };
+  return useMemo(
+    () => ({ s, update, reset, setPreset, shareLink, m, cashOk: m.pointBas >= 0, presetIntact: isPresetIntact(s) }),
+    [s, m, update, reset, setPreset, shareLink],
+  );
 }

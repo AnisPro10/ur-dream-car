@@ -35,7 +35,7 @@ export function NumberField({
     if (!Number.isNaN(n)) set(clamp(n));
   };
   const nudge = (dir: number) => {
-    const base = Number.isNaN(parse(raw)) ? value : parse(raw);
+    const base = clamp(Number.isNaN(parse(raw)) ? value : parse(raw));
     const n = clamp(Math.round((base + dir * step) / step) * step);
     set(n); setRaw(String(n));
   };

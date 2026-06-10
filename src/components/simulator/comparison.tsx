@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -82,19 +83,26 @@ export function Comparison({ s }: { s: Hypotheses }) {
     { key: "real-sarl", statut: "SARL", mode: "realiste" },
   ];
   const modeIntact = (mode: "prudent" | "realiste") => (mode === "prudent" ? isPrudentIntact(s) : isRealisteIntact(s));
-  const statutCols: Col[] = variants.map((v) => ({
-    key: v.key,
-    label: v.statut,
-    sub: v.mode === "prudent" ? "Prudent" : "Réaliste",
-    m: computeModel({ ...s, statut: v.statut, mode: v.mode, ...PRESETS[v.mode] }),
-    current: s.statut === v.statut && s.mode === v.mode && modeIntact(v.mode),
-  }));
+  // computeModel est pur : on ne relance les 6 simulations que si `s` change réellement.
+  const statutCols: Col[] = useMemo(
+    () => variants.map((v) => ({
+      key: v.key,
+      label: v.statut,
+      sub: v.mode === "prudent" ? "Prudent" : "Réaliste",
+      m: computeModel({ ...s, statut: v.statut, mode: v.mode, ...PRESETS[v.mode] }),
+      current: s.statut === v.statut && s.mode === v.mode && modeIntact(v.mode),
+    })),
+    [s],
+  );
 
   // Bloc 2 : stock vs courtage, mode et statut courants — chiffre la voie recommandée
-  const activiteCols: Col[] = [
-    { key: "stock", label: "Stock", sub: "Achat-revente", m: computeModel({ ...s, activite: "stock" }), current: s.activite === "stock" },
-    { key: "courtage", label: "Courtage", sub: "Commission", m: computeModel({ ...s, activite: "courtage" }), current: s.activite === "courtage" },
-  ];
+  const activiteCols: Col[] = useMemo(
+    () => [
+      { key: "stock", label: "Stock", sub: "Achat-revente", m: computeModel({ ...s, activite: "stock" }), current: s.activite === "stock" },
+      { key: "courtage", label: "Courtage", sub: "Commission", m: computeModel({ ...s, activite: "courtage" }), current: s.activite === "courtage" },
+    ],
+    [s],
+  );
 
   return (
     <div className="space-y-6">

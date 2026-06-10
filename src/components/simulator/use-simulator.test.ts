@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect } from "bun:test";
-import { computeModel, defaults, PRESETS, simulerRemuneration, type Hypotheses } from "./use-simulator";
+import { computeModel, defaults, PRESETS, simulerRemuneration, encodeState, decodeState, type Hypotheses } from "./use-simulator";
 
 const approx = (a: number, b: number, tol = 1) => expect(Math.abs(a - b)).toBeLessThanOrEqual(tol);
 
@@ -172,6 +172,33 @@ test("courtage : financement OK meme a faible capital (pas de BFR)", () => {
   const m = computeModel({ ...defaults, activite: "courtage", capital: 5000 });
   approx(m.bfrFinance, 0);
   expect(m.financementOk).toBe(true);
+});
+
+// ---- Validation d'etat : un lien/localStorage corrompu ne propage pas de NaN ----
+test("decodeState : un lien valide est restitue (retro-compat)", () => {
+  const link = encodeState({ ...defaults, volume: 30, statut: "SARL" });
+  const d = decodeState(link);
+  expect(d?.volume).toBe(30);
+  expect(d?.statut).toBe("SARL");
+});
+
+test("decodeState : volume non numerique rejete -> retour aux defauts, pas de NaN", () => {
+  const bad = encodeState({ ...defaults, volume: "abc" } as any);
+  expect(decodeState(bad)).toBeNull(); // etat corrompu ignore
+  const merged = { ...defaults, ...(decodeState(bad) ?? {}) };
+  const m = computeModel(merged);
+  for (const v of Object.values(m)) {
+    if (typeof v === "number") expect(Number.isNaN(v)).toBe(false);
+  }
+});
+
+test("decodeState : statut invalide rejete", () => {
+  const bad = encodeState({ ...defaults, statut: "FOO" } as any);
+  expect(decodeState(bad)).toBeNull();
+});
+
+test("decodeState : entree non base64 / JSON casse -> null sans throw", () => {
+  expect(decodeState("pas-du-base64-!!")).toBeNull();
 });
 
 // ---- Simulation juridique : parite avec le fichier Excel corrige (benefice 30 000, capital 18 000) ----
