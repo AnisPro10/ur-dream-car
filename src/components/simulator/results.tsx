@@ -182,9 +182,16 @@ export function CompteResultatView({ sim }: { sim: Sim }) {
 export function TresorerieView({ sim }: { sim: Sim }) {
   const { m, cashOk } = sim;
   const lowPoint = m.treso.reduce((a, b) => (b.treso < a.treso ? b : a), m.treso[0]);
+  // Même source de données que la courbe : le tableau reste synchronisé.
+  const rows = m.treso.map((p, i) => ({
+    mois: p.mois,
+    treso: p.treso,
+    delta: p.treso - (i === 0 ? m.ressources : m.treso[i - 1].treso),
+    isLow: p.mois === lowPoint?.mois,
+  }));
   return (
     <section>
-      <SectionHead title="Trésorerie mois par mois" desc={`Point bas ${eur(m.pointBas)} au ${lowPoint?.mois}`} />
+      <SectionHead title="Trésorerie mois par mois" desc={`Départ ${eur(m.ressources)} · point bas ${eur(m.pointBas)} au ${lowPoint?.mois}`} />
       <Card>
         <CardContent className="p-5">
           <div className="h-72" role="img" aria-label={`Courbe de trésorerie sur 12 mois, point bas ${eur(m.pointBas)}`}>
@@ -199,6 +206,43 @@ export function TresorerieView({ sim }: { sim: Sim }) {
                 {lowPoint && <ReferenceDot x={lowPoint.mois} y={lowPoint.treso} r={5} fill={cashOk ? "var(--color-success)" : "var(--color-destructive)"} stroke="white" />}
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tableau d'évolution mensuelle, synchronisé avec la courbe ci-dessus */}
+      <Card className="mt-5">
+        <CardContent className="p-5">
+          <div className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Détail mois par mois</div>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <table className="w-full min-w-[420px] border-collapse text-sm">
+              <caption className="sr-only">Trésorerie de fin de mois et variation mensuelle sur 12 mois</caption>
+              <thead>
+                <tr className="text-xs uppercase tracking-wider text-muted-foreground">
+                  <th scope="col" className="text-left font-medium py-2 pr-3">Mois</th>
+                  <th scope="col" className="text-right font-medium py-2 px-3">Trésorerie fin de mois</th>
+                  <th scope="col" className="text-right font-medium py-2 pl-3">Variation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-border/60">
+                  <th scope="row" className="text-left font-normal text-muted-foreground py-1.5 pr-3">Départ</th>
+                  <td className="text-right py-1.5 px-3 font-mono tabular-nums text-foreground font-medium">{eur(m.ressources)}</td>
+                  <td className="text-right py-1.5 pl-3 font-mono tabular-nums text-muted-foreground">—</td>
+                </tr>
+                {rows.map((r) => (
+                  <tr key={r.mois} className={cn("border-t border-border/60", r.isLow && "bg-destructive/5")}>
+                    <th scope="row" className="text-left font-normal text-muted-foreground py-1.5 pr-3">
+                      {r.mois}{r.isLow && <span className="ml-1.5 text-[10px] uppercase tracking-wider text-destructive font-semibold">point bas</span>}
+                    </th>
+                    <td className={cn("text-right py-1.5 px-3 font-mono tabular-nums font-semibold", r.treso < 0 ? "text-destructive" : "text-foreground")}>{eur(r.treso)}</td>
+                    <td className={cn("text-right py-1.5 pl-3 font-mono tabular-nums font-medium", r.delta < 0 ? "text-destructive" : "text-success")}>
+                      {r.delta >= 0 ? "+" : "−"}{eur(Math.abs(r.delta)).replace("-", "")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

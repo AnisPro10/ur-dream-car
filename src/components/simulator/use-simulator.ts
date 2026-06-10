@@ -149,6 +149,42 @@ export function isPresetIntact(s: Hypotheses): boolean {
   return PRESET_KEYS.every((k) => s[k] === PRESETS[s.mode][k]);
 }
 
+// --- Simulation juridique de rémunération (réplique du fichier Excel juridique) ---
+// Pour un bénéfice annuel avant rémunération donné, compare comment le dirigeant
+// est payé selon le statut et le salaire net visé : coût du salaire, IS, dividendes
+// nets et revenu net du dirigeant. Mêmes règles fiscales 2026 que computeModel.
+export interface RemunResult {
+  statut: Statut; salaire: number; chargesSoc: number; cotisMin: number; coutSalaire: number;
+  baseIS: number; is: number; distribuable: number; divBrut: number; divFisc: number; divNet: number;
+  nAssoc: number; revenuNetDirigeant: number; prelevements: number; tauxPrelevement: number;
+}
+
+export function simulerRemuneration(
+  benefice: number, capital: number, statut: Statut, salaire: number, distrib = 100,
+): RemunResult {
+  const isSarl = statut === "SARL";
+  const chargesSoc = salaire * (isSarl ? SARL_SOC : SAS_SOC);
+  const cotisMin = isSarl ? Math.max(0, COTIS_MIN - chargesSoc) : 0;
+  const coutSalaire = salaire + chargesSoc + cotisMin;
+  const baseIS = Math.max(benefice - coutSalaire, 0);
+  const is = isTax(baseIS);
+  const distribuable = baseIS - is;
+  const divBrut = Math.max(0, distribuable) * (distrib / 100);
+  const seuilDiv = 0.1 * capital;
+  const divBelow = Math.min(divBrut, seuilDiv);
+  const divAbove = Math.max(0, divBrut - seuilDiv);
+  const divFisc = isSarl ? divBelow * FLAT + divAbove * (PFU_IR + SARL_DIV) : divBrut * FLAT;
+  const divNet = divBrut - divFisc;
+  const nAssoc = statut === "SASU" ? 1 : NB_ASSOCIES;
+  const revenuNetDirigeant = salaire + divNet / nAssoc;
+  const prelevements = chargesSoc + cotisMin + is + divFisc;
+  const tauxPrelevement = benefice > 0 ? prelevements / benefice : 0;
+  return {
+    statut, salaire, chargesSoc, cotisMin, coutSalaire, baseIS, is, distribuable,
+    divBrut, divFisc, divNet, nAssoc, revenuNetDirigeant, prelevements, tauxPrelevement,
+  };
+}
+
 // --- Sauvegarde / partage : sérialisation de l'état dans l'URL (hash) + localStorage ---
 const STORAGE_KEY = "udc-sim-v1";
 export function encodeState(s: Hypotheses): string {

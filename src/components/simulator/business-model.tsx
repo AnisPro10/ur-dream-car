@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { RemunerationSim } from "./remuneration-sim";
 
 function Point({ k, v }: { k: string; v: string }) {
   return (
@@ -127,6 +128,8 @@ export function BusinessModel() {
           </div>
         </CardContent>
       </Card>
+
+      <RemunerationSim />
     </div>
   );
 }

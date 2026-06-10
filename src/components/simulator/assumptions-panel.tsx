@@ -15,7 +15,7 @@ type Props = {
 };
 
 // Champ numérique professionnel : saisie au clavier + pas à pas (−/+), unité, bornes.
-function NumberField({
+export function NumberField({
   label, value, set, min, max, step, unit, hint,
 }: {
   label: string; value: number; set: (v: number) => void;

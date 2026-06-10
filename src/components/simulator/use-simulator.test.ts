@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect } from "bun:test";
-import { computeModel, defaults, PRESETS, type Hypotheses } from "./use-simulator";
+import { computeModel, defaults, PRESETS, simulerRemuneration, type Hypotheses } from "./use-simulator";
 
 const approx = (a: number, b: number, tol = 1) => expect(Math.abs(a - b)).toBeLessThanOrEqual(tol);
 
@@ -172,4 +172,31 @@ test("courtage : financement OK meme a faible capital (pas de BFR)", () => {
   const m = computeModel({ ...defaults, activite: "courtage", capital: 5000 });
   approx(m.bfrFinance, 0);
   expect(m.financementOk).toBe(true);
+});
+
+// ---- Simulation juridique : parite avec le fichier Excel corrige (benefice 30 000, capital 18 000) ----
+test("simulerRemuneration SARL tous dividendes = Excel corrige (10 769,89)", () => {
+  const r = simulerRemuneration(30000, 18000, "SARL", 0);
+  approx(r.cotisMin, 1300); // gerant non remunere : plancher TNS
+  approx(r.baseIS, 28700); // 30000 - 1300
+  approx(r.is, 4305); // 15% de 28700
+  approx(r.distribuable, 24395);
+  approx(r.divNet, 10769.89, 0.5); // part>1800 a 45% TNS + 12,8% IR (PAS le PFU plein)
+});
+
+test("simulerRemuneration SAS tous dividendes (flat tax 31,4%)", () => {
+  const r = simulerRemuneration(30000, 18000, "SAS", 0);
+  approx(r.cotisMin, 0);
+  approx(r.is, 4500); // 15% de 30000
+  approx(r.distribuable, 25500);
+  approx(r.divNet, 25500 * (1 - 0.314), 0.5); // 17 493
+});
+
+test("simulerRemuneration : SASU garde tous les dividendes, SAS partage par 3", () => {
+  const sas = simulerRemuneration(30000, 18000, "SAS", 0);
+  const sasu = simulerRemuneration(30000, 18000, "SASU", 0);
+  approx(sasu.divNet, sas.divNet); // meme fiscalite societe
+  approx(sasu.revenuNetDirigeant, sasu.divNet); // 1 associe
+  approx(sas.revenuNetDirigeant, sas.divNet / 3); // 3 associes
+  expect(sasu.revenuNetDirigeant).toBeGreaterThan(sas.revenuNetDirigeant);
 });
