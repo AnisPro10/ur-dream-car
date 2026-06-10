@@ -1,50 +1,75 @@
-… 
-
 ## Objectif
 
-Reproduire à l'identique la **logique de calcul** du fichier `Simulateur_Auto_Occasion.jsx` (TVA sur marge, IS progressif, charges sociales SAS/SARL, dividendes, trésorerie mensuelle, BFR, ROI, scénarios de volume) dans le projet TanStack Start, avec une refonte visuelle plus moderne et mieux organisée.
+Remplacer la longue page unique à ancres par une **navigation multi-pages**, avec « Hypothèses » comme point d'entrée et chaque rubrique sur sa propre URL.
 
-## Ce qui est conservé à l'identique
+## Nouvelle architecture
 
-- Toutes les constantes (`TVA 0.20`, `SAS_SOC 0.80`, `SARL_SOC 0.45`, `COTIS_MIN 1200`, `FLAT 0.30`, `SARL_DIV 0.45`, IS 15 % / 25 % au-delà de 42 500 €).
-- Les valeurs par défaut des hypothèses (prix, frais, volume 24, capital 18 000 €, etc.).
-- Le bloc `useMemo` complet : calcul de CA, marge brute, TVA sur marge, contribution, charges fixes, excédent, IS, dividendes, trésorerie mois par mois avec décalage de rotation, BFR, ROI, scénarios 12/24/36/48/60.
-- Le contenu textuel français du business model (3 phases, comparatif SAS/SARL, décision).
+```text
+/hypotheses        → Saisie (panneau actuel, plein écran)
+/                  → Synthèse (KPIs + verdict)
+/compte-resultat   → Compte de résultat détaillé
+/tresorerie        → Courbe de trésorerie 12 mois
+/scenarios         → Scénarios de volume
+/comparaison       → Comparaison statut × mode, stock vs courtage
+/business          → Business & juridique
+```
 
-## Ce qui change visuellement
+Ordre dans la barre de navigation : **Hypothèses → Synthèse → Compte de résultat → Trésorerie → Scénarios → Comparaison → Business & juridique**.
 
-- Refonte avec **shadcn/ui + Tailwind v4** en utilisant les tokens sémantiques (`bg-card`, `text-muted-foreground`, etc.) au lieu de styles inline et palette `C.*` codée en dur.
-- Mise en place d'une palette « finance moderne » (teal sobre + accent ambre) dans `src/styles.css` (mode clair + sombre), inspirée de la palette d'origine (#15616D primaire).
-- Composants shadcn : `Card`, `Slider`, `Tabs`, `Button`, `Badge`, `Separator`, `Tooltip`, `Alert` pour l'avertissement trésorerie.
-- Typo : Fraunces (titres) + Inter (UI) + JetBrains Mono (chiffres), chargés via `<link>` dans `__root.tsx`.
-- Réorganisation :
-  - En-tête épuré avec titre + sous-titre + bascule onglets.
-  - **Sidebar hypothèses** regroupée en sections repliables (Statut, Segments, Frais, Charges, Activité) avec inputs numériques compacts à côté des sliders.
-  - **KPIs en bandeau** (4 cartes) avec micro-tendance et code couleur (vert/rouge/neutre via tokens).
-  - **Grille résultats** : Compte de résultat | Revenu associés + Ratios/BFR.
-  - **Graphiques recharts** retravaillés (grille discrète, tooltips arrondis cohérents avec les Cards).
-  - Onglet **Business model** : cartes Phase 1/2/3, tableau comparatif SAS/SARL, encart décision.
-- Responsive : sidebar repliée en accordion sur mobile, KPIs en 2×2.
+## Partage d'état
 
-## Structure technique
+Le hook `useSimulator` persiste déjà l'état dans `localStorage` + hash d'URL. Chaque page appellera `useSimulator()` et lira/écrira la même source de vérité — aucune modification de la logique de calcul.
 
-- Nouvelle route `src/routes/index.tsx` qui devient la page du simulateur.
-- Découpage en composants dans `src/components/simulator/` :
-  - `use-simulator.ts` — hook avec le state `s` et le `useMemo` (logique copiée verbatim).
-  - `assumptions-panel.tsx` — sliders/inputs.
-  - `kpi-bar.tsx`, `pl-statement.tsx`, `partners-income.tsx`, `ratios-bfr.tsx`.
-  - `cash-chart.tsx`, `volume-chart.tsx` (recharts).
-  - `business-model.tsx` — onglet stratégie.
-- Installation de `recharts` via `bun add recharts`.
-- Mise à jour des metadata SEO de la route (titre « Simulateur — Négoce de véhicules d'occasion », description, og:*).
+## Chrome partagée
 
-## Détails techniques (logique de calcul)
+- Le header (titre + badges Statut/Mode/Résultat/Tréso + HealthIndicator + ShareBar) passe dans `src/routes/__root.tsx` pour rester visible sur toutes les pages.
+- La barre de navigation latérale (desktop) / chips (mobile) devient un composant `<SimulatorNav />` rendu dans `__root.tsx`, avec des `<Link to="…">` TanStack Router (au lieu de `scrollToSection`). L'état actif vient de `useRouterState` (pathname).
+- `<Outlet />` rend la page courante au centre.
+- Le panneau « Hypothèses » de droite est **supprimé de la chrome** — il a sa propre page dédiée. Un encart léger « Récap hypothèses » (statut, mode, volume, mix) reste visible avec un bouton « Modifier » qui pointe vers `/hypotheses`.
 
-Identique au fichier source, ligne pour ligne dans le `useMemo` (lignes 169-226), y compris :
-- `tvaMarge = margeBrute * TVA / (1 + TVA)`
-- `is = ravis > 0 ? min(ravis, 42500)*0.15 + max(0, ravis-42500)*0.25 : 0`
-- `divFisc = divBrut*0.30 + (SARL ? max(0, divBrut - 0.1*capital)*0.45 : 0)`
-- Boucle trésorerie 12 mois avec `lag = round(rotation)` et CFE imputée sur M12.
-- `revenuDirigeant = remun + divNet/3` (3 associés).
+## Découpage des composants
 
-Aucune modification des formules ni des seuils. Le disclaimer fiscal en bas de page est conservé mot pour mot.
+- `results.tsx` est éclaté en 4 sous-composants exportés (déjà structurés en sections) :
+  - `SyntheseView` (lignes 93-124)
+  - `CompteResultatView` (lignes 126-176)
+  - `TresorerieView` (lignes 178-198)
+  - `ScenariosView` (lignes 200-230)
+  Chaque sous-composant reçoit `sim` en prop. Aucun changement de rendu ni de calcul.
+- `assumptions-panel.tsx` est réutilisé tel quel sur `/hypotheses`, en pleine largeur (au lieu d'un panneau sticky 330 px).
+- `comparison.tsx` et `business-model.tsx` sont inchangés.
+
+## Fichiers à créer
+
+```text
+src/routes/hypotheses.tsx
+src/routes/compte-resultat.tsx
+src/routes/tresorerie.tsx
+src/routes/scenarios.tsx
+src/routes/comparaison.tsx
+src/routes/business.tsx
+src/components/simulator/simulator-nav.tsx
+src/components/simulator/hypotheses-recap.tsx
+```
+
+Chaque route définit son propre `head()` (title + description + og) — Synthèse, Compte de résultat, Trésorerie, etc. — pour SEO et partage.
+
+## Fichiers à modifier
+
+- `src/routes/__root.tsx` : header sticky + layout 2 colonnes (nav | Outlet) + `<Outlet />`.
+- `src/routes/index.tsx` : ne contient plus que la Synthèse (KPIs + verdict).
+- `src/components/simulator/results.tsx` : split en exports nommés ; suppression de `ResultsView` agrégé.
+- `src/components/simulator/use-scrollspy.ts` : devient inutile, supprimé.
+
+## Points hors scope
+
+- Aucune modification de `use-simulator.ts` (logique de calcul, tests, presets, encodage URL).
+- Aucun changement visuel des cartes/graphes existants.
+- Pas de garde d'authentification (le simulateur reste public).
+- Le lien de partage (`#s=…`) continue de fonctionner : `useSimulator` lit le hash au montage sur n'importe quelle route.
+
+## Détails techniques
+
+- Liens : `<Link to="/tresorerie" activeProps={{ className: "bg-primary/10 text-primary font-semibold" }}>` remplace les boutons `scrollToSection`.
+- État actif sur mobile : `useRouterState({ select: s => s.location.pathname })`.
+- Le `scroll-mt-28` et les `id="…"` sont retirés (plus d'ancres).
+- `defaultPreload: "intent"` (déjà actif) → navigation instantanée entre pages.
