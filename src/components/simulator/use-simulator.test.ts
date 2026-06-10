@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { test, expect } from "bun:test";
 import { computeModel, defaults, PRESETS, type Hypotheses } from "./use-simulator";
 
