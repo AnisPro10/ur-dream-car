@@ -11,7 +11,7 @@ import { eur } from "./use-simulator";
 import { useSim } from "./simulator-context";
 import { HealthIndicator } from "./health-indicator";
 import { ThemeToggle } from "./theme-toggle";
-import { downloadCsv } from "./export-csv";
+import { downloadExcel } from "./export-excel";
 
 // Hypothèses en tête : on saisit puis on consulte chaque rubrique.
 export const NAV_ITEMS = [
@@ -30,6 +30,12 @@ export const NAV_ITEMS = [
 function ShareBar() {
   const sim = useSim();
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const exportXlsx = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try { await downloadExcel(sim); } finally { setExporting(false); }
+  };
   const copy = async () => {
     try {
       const url = sim.shareLink();
@@ -45,9 +51,9 @@ function ShareBar() {
         {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Link2 className="h-3.5 w-3.5" />}
         <span className="hidden lg:inline">{copied ? "Lien copié" : "Copier le lien"}</span>
       </Button>
-      <Button variant="outline" size="sm" onClick={() => downloadCsv(sim)} className="h-8 gap-1.5 text-xs" title="Exporter en CSV (Excel)">
+      <Button variant="outline" size="sm" onClick={exportXlsx} disabled={exporting} className="h-8 gap-1.5 text-xs" title="Exporter en Excel (.xlsx)">
         <Download className="h-3.5 w-3.5" />
-        <span className="hidden lg:inline">Export Excel</span>
+        <span className="hidden lg:inline">{exporting ? "Export…" : "Export Excel"}</span>
       </Button>
       <Button variant="outline" size="sm" onClick={() => window.print()} className="h-8 gap-1.5 text-xs">
         <Printer className="h-3.5 w-3.5" />
