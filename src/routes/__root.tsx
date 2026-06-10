@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -11,6 +12,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { SimulatorProvider } from "@/components/simulator/simulator-context";
+import { SimulatorHeader, SimulatorSideNav, SimulatorTopNav } from "@/components/simulator/simulator-nav";
+import { HypothesesRecap } from "@/components/simulator/hypotheses-recap";
 
 function NotFoundComponent() {
   return (
@@ -77,18 +81,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Dream Car" },
-      { name: "description", content: "Car Deal Simulator: A web application that simulates the viability of car buying and selling projects." },
+      { title: "Simulateur — Négoce de véhicules d'occasion" },
+      { name: "description", content: "Simulateur financier pour un projet d'achat-revente de véhicules d'occasion : hypothèses, synthèse, compte de résultat, trésorerie, scénarios." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Dream Car" },
-      { property: "og:description", content: "Car Deal Simulator: A web application that simulates the viability of car buying and selling projects." },
+      { property: "og:title", content: "Simulateur — Négoce de véhicules d'occasion" },
+      { property: "og:description", content: "Simulateur financier interactif : marge, trésorerie, BFR, fiscalité SAS vs SARL." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Dream Car" },
-      { name: "twitter:description", content: "Car Deal Simulator: A web application that simulates the viability of car buying and selling projects." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1dce12f-81f3-4e70-89a1-17f1beb5d84e" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1dce12f-81f3-4e70-89a1-17f1beb5d84e" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -120,13 +120,31 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function SimulatorShell() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isHypotheses = pathname === "/hypotheses";
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans">
+      <SimulatorHeader />
+      <div className="max-w-[1500px] mx-auto px-5 py-6 grid gap-6 lg:grid-cols-[200px_1fr]">
+        <SimulatorSideNav />
+        <main className="min-w-0">
+          <SimulatorTopNav />
+          {!isHypotheses && <HypothesesRecap />}
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <SimulatorProvider>
+        <SimulatorShell />
+      </SimulatorProvider>
     </QueryClientProvider>
   );
 }
