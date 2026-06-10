@@ -1,15 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSimulator } from "@/components/simulator/use-simulator";
+import { LayoutDashboard, FileText, LineChart, BarChart3, Briefcase } from "lucide-react";
+import { useSimulator, eur } from "@/components/simulator/use-simulator";
 import { AssumptionsPanel } from "@/components/simulator/assumptions-panel";
 import { ResultsView } from "@/components/simulator/results";
 import { BusinessModel } from "@/components/simulator/business-model";
+import { useScrollSpy, scrollToSection } from "@/components/simulator/use-scrollspy";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Simulateur — Négoce de véhicules d'occasion" },
-      { name: "description", content: "Simulateur financier et business model pour un projet d'achat-revente de véhicules d'occasion : marge, trésorerie, fiscalité SAS/SARL." },
+      { name: "description", content: "Simulateur financier et business model pour un projet d'achat-revente de véhicules d'occasion : marge, trésorerie, fiscalité SAS/SASU/SARL." },
       { property: "og:title", content: "Simulateur — Négoce de véhicules d'occasion" },
       { property: "og:description", content: "Simulateur financier interactif : marge, trésorerie, BFR, fiscalité SAS vs SARL." },
     ],
@@ -17,39 +20,97 @@ export const Route = createFileRoute("/")({
   component: SimulatorPage,
 });
 
+const SECTIONS = [
+  { id: "synthese", label: "Synthèse", icon: LayoutDashboard },
+  { id: "resultat", label: "Compte de résultat", icon: FileText },
+  { id: "tresorerie", label: "Trésorerie", icon: LineChart },
+  { id: "scenarios", label: "Scénarios", icon: BarChart3 },
+  { id: "business", label: "Business & juridique", icon: Briefcase },
+] as const;
+
 function SimulatorPage() {
   const sim = useSimulator();
+  const { s, m, cashOk, presetIntact } = sim;
+  const active = useScrollSpy(SECTIONS.map((x) => x.id));
+  const modeLabel = presetIntact ? (s.mode === "realiste" ? "Réaliste" : "Prudent") : "Personnalisé";
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
-      <div className="max-w-7xl mx-auto px-5 py-8">
-        <header className="border-b border-primary/30 pb-5 mb-6">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-primary font-medium">Projet entrepreneurial</div>
-          <h1 className="font-serif text-3xl md:text-4xl font-semibold mt-2 tracking-tight">
-            Négoce de véhicules d'occasion
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-            Simulateur financier interactif et business model — ajustez les hypothèses, visualisez la trésorerie, comparez les structures juridiques.
-          </p>
-        </header>
+      {/* Barre de contexte (sticky) */}
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <div className="max-w-[1500px] mx-auto px-5 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-primary font-semibold hidden sm:inline">Simulateur</span>
+            <h1 className="font-serif text-base font-semibold truncate">Négoce de véhicules d'occasion</h1>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Badge variant="secondary" className="hidden sm:inline-flex">Statut : {s.statut}</Badge>
+            <Badge variant="secondary">Mode : {modeLabel}</Badge>
+            <Badge variant={m.netSoc > 0 ? "success" : "destructive"}>{eur(m.netSoc)}</Badge>
+            <Badge variant={cashOk ? "success" : "destructive"} className="hidden md:inline-flex">Tréso {cashOk ? "OK" : "risque"}</Badge>
+          </div>
+        </div>
+      </header>
 
-        <Tabs defaultValue="sim" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="sim">Simulateur financier</TabsTrigger>
-            <TabsTrigger value="bm">Business model & stratégie</TabsTrigger>
-          </TabsList>
+      <div className="max-w-[1500px] mx-auto px-5 py-6 grid gap-6 lg:grid-cols-[180px_1fr_330px]">
+        {/* Rail de navigation (desktop) */}
+        <nav aria-label="Sections du tableau de bord" className="hidden lg:block">
+          <div className="sticky top-20 space-y-1">
+            {SECTIONS.map((sec) => {
+              const Icon = sec.icon;
+              return (
+                <button
+                  key={sec.id}
+                  onClick={() => scrollToSection(sec.id)}
+                  aria-current={active === sec.id ? "true" : undefined}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active === sec.id ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{sec.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-          <TabsContent value="sim" className="mt-0">
-            <div className="grid lg:grid-cols-[340px_1fr] gap-6">
-              <AssumptionsPanel s={sim.s} update={sim.update} reset={sim.reset} setPreset={sim.setPreset} />
-              <ResultsView sim={sim} />
-            </div>
-          </TabsContent>
+        {/* Navigation mobile (chips) */}
+        <nav aria-label="Sections" className="lg:hidden -mx-5 px-5 overflow-x-auto flex gap-2 pb-1">
+          {SECTIONS.map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => scrollToSection(sec.id)}
+              className={cn(
+                "shrink-0 rounded-full px-3 py-1.5 text-xs border transition-colors",
+                active === sec.id ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground",
+              )}
+            >
+              {sec.label}
+            </button>
+          ))}
+        </nav>
 
-          <TabsContent value="bm" className="mt-0">
+        {/* Hypothèses (mobile : au-dessus des résultats) */}
+        <div className="lg:hidden">
+          <AssumptionsPanel s={sim.s} update={sim.update} reset={sim.reset} setPreset={sim.setPreset} presetIntact={presetIntact} />
+        </div>
+
+        {/* Résultats (centre) */}
+        <main className="min-w-0">
+          <ResultsView sim={sim} />
+          <section id="business" className="scroll-mt-28 mt-10">
             <BusinessModel />
-          </TabsContent>
-        </Tabs>
+          </section>
+        </main>
+
+        {/* Hypothèses (desktop : panneau de droite sticky) */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-20">
+            <AssumptionsPanel s={sim.s} update={sim.update} reset={sim.reset} setPreset={sim.setPreset} presetIntact={presetIntact} />
+          </div>
+        </aside>
       </div>
     </div>
   );

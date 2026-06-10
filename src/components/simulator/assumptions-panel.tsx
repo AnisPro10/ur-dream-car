@@ -1,6 +1,8 @@
+import { useId } from "react";
 import { RotateCcw } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { Hypotheses, Mode } from "./use-simulator";
@@ -11,23 +13,56 @@ type Props = {
   update: <K extends keyof Hypotheses>(k: K) => (v: Hypotheses[K]) => void;
   reset: () => void;
   setPreset: (mode: Mode) => void;
+  presetIntact: boolean;
 };
 
 function Row({
   label, value, set, min, max, step, fmt = eur,
 }: { label: string; value: number; set: (v: number) => void; min: number; max: number; step: number; fmt?: (v: number) => string }) {
+  const id = useId();
   return (
     <div className="mb-4">
       <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-xs text-muted-foreground">{label}</span>
+        <span id={id} className="text-xs text-muted-foreground">{label}</span>
         <span className="text-xs font-mono font-semibold text-primary tabular-nums">{fmt(value)}</span>
       </div>
-      <Slider value={[value]} min={min} max={max} step={step} onValueChange={(v) => set(v[0])} />
+      <Slider
+        value={[value]} min={min} max={max} step={step}
+        onValueChange={(v) => set(v[0])}
+        aria-labelledby={id}
+        ariaLabel={label}
+        ariaValueText={fmt(value)}
+      />
     </div>
   );
 }
 
-export function AssumptionsPanel({ s, update, reset, setPreset }: Props) {
+function Segmented<T extends string>({
+  label, options, value, onChange, cols,
+}: { label: string; options: { v: T; label: string }[]; value: T | null; onChange: (v: T) => void; cols: string }) {
+  return (
+    <div role="radiogroup" aria-label={label} className={`grid ${cols} gap-2`}>
+      {options.map((o) => {
+        const sel = value === o.v;
+        return (
+          <button
+            key={o.v}
+            role="radio"
+            aria-checked={sel}
+            onClick={() => onChange(o.v)}
+            className={`h-9 rounded-md text-sm font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+              sel ? "bg-primary text-primary-foreground border-primary" : "bg-transparent text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function AssumptionsPanel({ s, update, reset, setPreset, presetIntact }: Props) {
   return (
     <Card className="h-fit">
       <CardContent className="p-5">
@@ -39,44 +74,29 @@ export function AssumptionsPanel({ s, update, reset, setPreset }: Props) {
         </div>
 
         <div className="mb-4">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Mode d'hypothèses</div>
-          <div className="grid grid-cols-2 gap-2">
-            {(["prudent", "realiste"] as const).map((md) => (
-              <button
-                key={md}
-                onClick={() => setPreset(md)}
-                className={`h-9 rounded-md text-sm font-semibold border transition-colors ${
-                  s.mode === md
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-transparent text-muted-foreground border-border hover:bg-muted"
-                }`}
-              >
-                {md === "prudent" ? "Prudent" : "Réaliste"}
-              </button>
-            ))}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Mode d'hypothèses</span>
+            {!presetIntact && <Badge variant="warning" className="text-[10px] px-1.5 py-0">Personnalisé</Badge>}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1.5 leading-snug">
-            Réaliste = toutes les charges réelles (reconditionnement, assurance, diffusion, déplacements, décote).
+          <Segmented<Mode>
+            label="Mode d'hypothèses" cols="grid-cols-2"
+            value={presetIntact ? s.mode : null}
+            onChange={(md) => setPreset(md)}
+            options={[{ v: "prudent", label: "Prudent" }, { v: "realiste", label: "Réaliste" }]}
+          />
+          <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
+            Prudent = hypothèses du modèle audité. Réaliste = toutes les charges réelles (reconditionnement, assurance, diffusion, déplacements, décote).
           </p>
         </div>
 
         <div className="mb-4">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Statut juridique</div>
-          <div className="grid grid-cols-3 gap-2">
-            {(["SAS", "SASU", "SARL"] as const).map((st) => (
-              <button
-                key={st}
-                onClick={() => update("statut")(st)}
-                className={`h-9 rounded-md text-sm font-semibold border transition-colors ${
-                  s.statut === st
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-transparent text-muted-foreground border-border hover:bg-muted"
-                }`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">Statut juridique</div>
+          <Segmented
+            label="Statut juridique" cols="grid-cols-3"
+            value={s.statut}
+            onChange={(st) => update("statut")(st)}
+            options={[{ v: "SAS", label: "SAS" }, { v: "SASU", label: "SASU" }, { v: "SARL", label: "SARL" }]}
+          />
         </div>
 
         <Accordion type="multiple" defaultValue={["rem", "act"]} className="w-full">
