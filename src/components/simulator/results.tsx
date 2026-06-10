@@ -4,15 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { eur, num, pct } from "./use-simulator";
+import { InfoTerm } from "./info-term";
 import type { Sim } from "./simulator-context";
 
 type Tone = "good" | "bad" | "neutral";
 
 function Kpi({
-  icon: Icon, label, value, sub, tone = "neutral", badge,
+  icon: Icon, label, value, sub, tone = "neutral", badge, term,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  label: string; value: string; sub?: string; tone?: Tone;
+  label: string; value: string; sub?: string; tone?: Tone; term?: string;
   badge?: { text: string; variant: "success" | "destructive" | "warning" | "secondary" };
 }) {
   const text = tone === "good" ? "text-success" : tone === "bad" ? "text-destructive" : "text-foreground";
@@ -21,7 +22,7 @@ function Kpi({
     <Card className={cn("border-l-4", accent)}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{label}</span>
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{term ? <InfoTerm term={term}>{label}</InfoTerm> : label}</span>
           <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
         <div className={cn("font-mono text-2xl font-semibold tabular-nums leading-tight", text)}>{value}</div>
@@ -45,14 +46,14 @@ export function SectionHead({ title, desc }: { title: string; desc?: string }) {
 }
 
 function Row({
-  label, value, strong, accent, indent, tone,
-}: { label: string; value: string; strong?: boolean; accent?: boolean; indent?: boolean; tone?: "bad" | "good" }) {
+  label, value, strong, accent, indent, tone, term,
+}: { label: string; value: string; strong?: boolean; accent?: boolean; indent?: boolean; tone?: "bad" | "good"; term?: string }) {
   return (
     <div className={cn(
       "flex justify-between py-1.5 border-b border-border/60 last:border-0",
       indent && "pl-4", strong && "bg-muted/30 -mx-2 px-2 rounded",
     )}>
-      <span className={cn("text-sm", strong ? "text-foreground font-semibold" : "text-muted-foreground")}>{label}</span>
+      <span className={cn("text-sm", strong ? "text-foreground font-semibold" : "text-muted-foreground")}>{term ? <InfoTerm term={term}>{label}</InfoTerm> : label}</span>
       <span className={cn(
         "text-sm font-mono tabular-nums",
         tone === "bad" ? "text-destructive" : tone === "good" ? "text-success" : accent ? "text-primary" : strong ? "text-foreground" : "text-muted-foreground",
@@ -90,11 +91,11 @@ export function SyntheseView({ sim }: { sim: Sim }) {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi icon={Coins} label="Résultat net société" value={eur(m.netSoc)} sub="après rémunération"
+        <Kpi icon={Coins} label="Résultat net société" term="Résultat net" value={eur(m.netSoc)} sub="après rémunération"
           tone={m.netSoc > 0 ? "good" : "bad"} badge={{ text: m.netSoc > 0 ? "Bénéfice" : "Perte", variant: m.netSoc > 0 ? "success" : "destructive" }} />
         <Kpi icon={Wallet} label="Revenu net dirigeant" value={eur(m.revenuDirigeant)} sub={`salaire + ${m.nAssoc === 1 ? "dividendes" : "1/" + m.nAssoc + " dividendes"}`} />
-        <Kpi icon={Percent} label="Marge nette" value={pct(m.tMargeNette)} sub={`brute ${pct(m.tMargeBrute)}`} tone={m.tMargeNette > 0 ? "good" : "bad"} />
-        <Kpi icon={cashOk ? TrendingUp : TrendingDown} label="Point bas trésorerie" value={eur(m.pointBas)}
+        <Kpi icon={Percent} label="Marge nette" term="Marge nette" value={pct(m.tMargeNette)} sub={`brute ${pct(m.tMargeBrute)}`} tone={m.tMargeNette > 0 ? "good" : "bad"} />
+        <Kpi icon={cashOk ? TrendingUp : TrendingDown} label="Point bas trésorerie" term="Point bas de trésorerie" value={eur(m.pointBas)}
           tone={cashOk ? "good" : "bad"} badge={{ text: cashOk ? "Capital suffisant" : "Capital insuffisant", variant: cashOk ? "success" : "destructive" }} />
       </div>
     </section>
@@ -112,15 +113,15 @@ export function CompteResultatView({ sim }: { sim: Sim }) {
             <Row label={m.courtage ? "Commissions encaissées" : "Chiffre d'affaires"} value={eur(m.ca)} strong />
             {!m.courtage && <Row label="− Coût d'achat" value={eur(-m.achats)} indent />}
             {!m.courtage && <Row label="Marge brute" value={eur(m.margeBrute)} strong />}
-            <Row label={m.courtage ? "− TVA (20 % sur commission)" : "− TVA sur marge"} value={eur(-m.tvaMarge)} indent />
-            <Row label="− Frais variables" value={eur(-m.fraisVar)} indent />
-            <Row label="Contribution" value={eur(m.contribution)} strong />
+            <Row label={m.courtage ? "− TVA (20 % sur commission)" : "− TVA sur marge"} term="TVA sur marge" value={eur(-m.tvaMarge)} indent />
+            <Row label="− Frais variables" term="Frais variables" value={eur(-m.fraisVar)} indent />
+            <Row label="Contribution" term="Contribution" value={eur(m.contribution)} strong />
             <Row label="− Charges fixes" value={eur(-m.chargesFixesAn)} indent />
             <Row label="− CFE" value={eur(-s.cfe)} indent />
             <Row label="− Rémunération dirigeant" value={eur(-s.remun)} indent />
             <Row label="− Charges sociales" value={eur(-m.chargesSoc)} indent />
-            {m.cotisMin > 0 && <Row label="− Cotisations min. (SARL)" value={eur(-m.cotisMin)} indent />}
-            <Row label="− Impôt (IS)" value={eur(-m.is)} indent />
+            {m.cotisMin > 0 && <Row label="− Cotisations min. (SARL)" term="TNS" value={eur(-m.cotisMin)} indent />}
+            <Row label="− Impôt (IS)" term="IS" value={eur(-m.is)} indent />
             <Row label="Résultat net société" value={eur(m.netSoc)} strong accent tone={m.netSoc < 0 ? "bad" : "good"} />
           </CardContent>
         </Card>
@@ -141,11 +142,11 @@ export function CompteResultatView({ sim }: { sim: Sim }) {
             <CardContent className="p-5">
               <div className="text-xs font-semibold uppercase tracking-wider text-primary mb-2">Ratios, BFR & financement</div>
               <Row label="Taux de contribution" value={pct(m.tContribution)} />
-              <Row label="Seuil de rentabilité (charges fixes)" value={num(m.seuilAn / 12, 2) + (m.courtage ? " mandats/mois" : " v./mois")} />
+              <Row label="Seuil de rentabilité (charges fixes)" term="Seuil de rentabilité" value={num(m.seuilAn / 12, 2) + (m.courtage ? " mandats/mois" : " v./mois")} />
               <Row label={m.courtage ? "Contribution / mandat" : "Contribution / voiture"} value={eur(m.contribParVoiture)} tone={m.contribParVoiture < 0 ? "bad" : undefined} />
               {!m.courtage && <Row label="Stock moyen (valeur)" value={eur(m.stockMoyen)} />}
               {!m.courtage && <Row label="Rotation du stock" value={num(m.rotationStock, 1) + " ×/an"} />}
-              <Row label="BFR à financer" value={m.courtage ? "0 € (sans stock)" : eur(m.bfrFinance)} tone={m.courtage ? "good" : undefined} />
+              <Row label="BFR à financer" term="BFR" value={m.courtage ? "0 € (sans stock)" : eur(m.bfrFinance)} tone={m.courtage ? "good" : undefined} />
               <Row label="Ressources (capital + ARCE + prêt)" value={eur(m.ressources)} />
               <Row label="Couverture du BFR" value={m.financementOk ? "Financé" : "Insuffisant"} tone={m.financementOk ? "good" : "bad"} accent />
               <Row label="ROI du capital" value={pct(m.roi)} accent tone={m.roi < 0 ? "bad" : "good"} />

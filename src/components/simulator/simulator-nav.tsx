@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { eur } from "./use-simulator";
 import { useSim } from "./simulator-context";
 import { HealthIndicator } from "./health-indicator";
+import { ThemeToggle } from "./theme-toggle";
 
 // Hypothèses en tête : on saisit puis on consulte chaque rubrique.
 export const NAV_ITEMS = [
@@ -71,6 +72,7 @@ export function SimulatorHeader() {
           </Badge>
           <HealthIndicator />
           <span className="hidden sm:block w-px h-5 bg-border mx-1" aria-hidden="true" />
+          <ThemeToggle />
           <ShareBar />
         </div>
       </div>

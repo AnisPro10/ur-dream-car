@@ -15,6 +15,10 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SimulatorProvider } from "@/components/simulator/simulator-context";
 import { SimulatorHeader, SimulatorSideNav, SimulatorTopNav } from "@/components/simulator/simulator-nav";
 import { HypothesesRecap } from "@/components/simulator/hypotheses-recap";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Applique le thème sombre avant la 1re peinture (évite tout flash clair → sombre).
+const THEME_SCRIPT = "try{if(localStorage.getItem('udc-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}";
 
 function NotFoundComponent() {
   return (
@@ -108,8 +112,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
@@ -145,7 +150,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <SimulatorProvider>
-        <SimulatorShell />
+        <TooltipProvider delayDuration={150}>
+          <SimulatorShell />
+        </TooltipProvider>
       </SimulatorProvider>
     </QueryClientProvider>
   );

@@ -74,6 +74,37 @@ const isPrudentIntact = (s: Hypotheses) =>
 const isRealisteIntact = (s: Hypotheses) =>
   (Object.keys(PRESETS.realiste) as (keyof typeof PRESETS.realiste)[]).every((k) => s[k] === PRESETS.realiste[k]);
 
+// Graphe « football field » : résultat net par variante, barres horizontales
+// de part et d'autre d'une ligne zéro. CSS pur (pas de dépendance graphique).
+function FootballField({ cols }: { cols: Col[] }) {
+  const maxAbs = Math.max(1, ...cols.map((c) => Math.abs(c.m.netSoc)));
+  return (
+    <div className="mb-4 space-y-1.5" role="img" aria-label="Résultat net société par variante">
+      <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Résultat net société</div>
+      {cols.map((c) => {
+        const v = c.m.netSoc;
+        const pos = v >= 0;
+        const w = (Math.abs(v) / maxAbs) * 50;
+        return (
+          <div key={c.key} className="flex items-center gap-2 text-xs">
+            <span className={cn("w-24 shrink-0 truncate", c.current ? "font-semibold text-foreground" : "text-muted-foreground")}>
+              {c.label} · {c.sub}
+            </span>
+            <div className="relative flex-1 h-5 rounded bg-muted/40">
+              <div className="absolute inset-y-0 left-1/2 w-px bg-border" aria-hidden="true" />
+              <div
+                className={cn("absolute inset-y-1 rounded-sm", pos ? "bg-success" : "bg-destructive", c.current && "ring-2 ring-foreground/40")}
+                style={pos ? { left: "50%", width: `${w}%` } : { right: "50%", width: `${w}%` }}
+              />
+            </div>
+            <span className={cn("w-20 shrink-0 text-right font-mono tabular-nums", pos ? "text-success" : "text-destructive")}>{eur(v)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Comparison({ s }: { s: Hypotheses }) {
   // Bloc 1 : statut × mode (charges réelles), toutes les autres hypothèses figées sur l'état courant
   const variants: { key: string; statut: Hypotheses["statut"]; mode: "prudent" | "realiste" }[] = [
@@ -114,6 +145,7 @@ export function Comparison({ s }: { s: Hypotheses }) {
               Mêmes prix, volume et financement ; seuls le statut et le jeu d'hypothèses changent.
             </p>
           </div>
+          <FootballField cols={statutCols} />
           <CompareTable cols={statutCols} rows={METRICS} caption="Comparaison par statut juridique et niveau de charges" />
         </CardContent>
       </Card>
