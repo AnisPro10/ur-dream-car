@@ -13,6 +13,8 @@ import { Route as TresorerieRouteImport } from './routes/tresorerie'
 import { Route as SyntheseRouteImport } from './routes/synthese'
 import { Route as ScenariosRouteImport } from './routes/scenarios'
 import { Route as HypothesesRouteImport } from './routes/hypotheses'
+import { Route as DictionnaireRouteImport } from './routes/dictionnaire'
+import { Route as DemarrageRouteImport } from './routes/demarrage'
 import { Route as CompteResultatRouteImport } from './routes/compte-resultat'
 import { Route as ComparaisonRouteImport } from './routes/comparaison'
 import { Route as BusinessRouteImport } from './routes/business'
@@ -37,6 +39,16 @@ const ScenariosRoute = ScenariosRouteImport.update({
 const HypothesesRoute = HypothesesRouteImport.update({
   id: '/hypotheses',
   path: '/hypotheses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DictionnaireRoute = DictionnaireRouteImport.update({
+  id: '/dictionnaire',
+  path: '/dictionnaire',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemarrageRoute = DemarrageRouteImport.update({
+  id: '/demarrage',
+  path: '/demarrage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompteResultatRoute = CompteResultatRouteImport.update({
@@ -70,6 +82,8 @@ export interface FileRoutesByFullPath {
   '/business': typeof BusinessRoute
   '/comparaison': typeof ComparaisonRoute
   '/compte-resultat': typeof CompteResultatRoute
+  '/demarrage': typeof DemarrageRoute
+  '/dictionnaire': typeof DictionnaireRoute
   '/hypotheses': typeof HypothesesRoute
   '/scenarios': typeof ScenariosRoute
   '/synthese': typeof SyntheseRoute
@@ -81,6 +95,8 @@ export interface FileRoutesByTo {
   '/business': typeof BusinessRoute
   '/comparaison': typeof ComparaisonRoute
   '/compte-resultat': typeof CompteResultatRoute
+  '/demarrage': typeof DemarrageRoute
+  '/dictionnaire': typeof DictionnaireRoute
   '/hypotheses': typeof HypothesesRoute
   '/scenarios': typeof ScenariosRoute
   '/synthese': typeof SyntheseRoute
@@ -93,6 +109,8 @@ export interface FileRoutesById {
   '/business': typeof BusinessRoute
   '/comparaison': typeof ComparaisonRoute
   '/compte-resultat': typeof CompteResultatRoute
+  '/demarrage': typeof DemarrageRoute
+  '/dictionnaire': typeof DictionnaireRoute
   '/hypotheses': typeof HypothesesRoute
   '/scenarios': typeof ScenariosRoute
   '/synthese': typeof SyntheseRoute
@@ -106,6 +124,8 @@ export interface FileRouteTypes {
     | '/business'
     | '/comparaison'
     | '/compte-resultat'
+    | '/demarrage'
+    | '/dictionnaire'
     | '/hypotheses'
     | '/scenarios'
     | '/synthese'
@@ -117,6 +137,8 @@ export interface FileRouteTypes {
     | '/business'
     | '/comparaison'
     | '/compte-resultat'
+    | '/demarrage'
+    | '/dictionnaire'
     | '/hypotheses'
     | '/scenarios'
     | '/synthese'
@@ -128,6 +150,8 @@ export interface FileRouteTypes {
     | '/business'
     | '/comparaison'
     | '/compte-resultat'
+    | '/demarrage'
+    | '/dictionnaire'
     | '/hypotheses'
     | '/scenarios'
     | '/synthese'
@@ -140,6 +164,8 @@ export interface RootRouteChildren {
   BusinessRoute: typeof BusinessRoute
   ComparaisonRoute: typeof ComparaisonRoute
   CompteResultatRoute: typeof CompteResultatRoute
+  DemarrageRoute: typeof DemarrageRoute
+  DictionnaireRoute: typeof DictionnaireRoute
   HypothesesRoute: typeof HypothesesRoute
   ScenariosRoute: typeof ScenariosRoute
   SyntheseRoute: typeof SyntheseRoute
@@ -175,6 +201,20 @@ declare module '@tanstack/react-router' {
       path: '/hypotheses'
       fullPath: '/hypotheses'
       preLoaderRoute: typeof HypothesesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dictionnaire': {
+      id: '/dictionnaire'
+      path: '/dictionnaire'
+      fullPath: '/dictionnaire'
+      preLoaderRoute: typeof DictionnaireRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demarrage': {
+      id: '/demarrage'
+      path: '/demarrage'
+      fullPath: '/demarrage'
+      preLoaderRoute: typeof DemarrageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compte-resultat': {
@@ -220,6 +260,8 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessRoute: BusinessRoute,
   ComparaisonRoute: ComparaisonRoute,
   CompteResultatRoute: CompteResultatRoute,
+  DemarrageRoute: DemarrageRoute,
+  DictionnaireRoute: DictionnaireRoute,
   HypothesesRoute: HypothesesRoute,
   ScenariosRoute: ScenariosRoute,
   SyntheseRoute: SyntheseRoute,

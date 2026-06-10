@@ -108,7 +108,7 @@ export function LandingPage() {
             </p>
 
             <div className="udc-reveal mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: "240ms" }}>
-              <CtaPrimary to="/synthese">Accéder au simulateur</CtaPrimary>
+              <CtaPrimary to="/demarrage">Accéder au simulateur</CtaPrimary>
               <Link
                 to="/business"
                 className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -209,7 +209,7 @@ export function LandingPage() {
                 </div>
                 <div className="mt-8">
                   <Link
-                    to="/synthese"
+                    to="/demarrage"
                     className="group inline-flex items-center gap-2 rounded-full bg-background px-6 py-3 text-sm font-semibold text-foreground shadow-lg transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
                   >
                     Ouvrir le simulateur
@@ -274,7 +274,7 @@ export function LandingPage() {
             Le simulateur ouvre directement sur la synthèse : résultat, trésorerie, fiscalité et scénarios, tout est paramétrable.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <CtaPrimary to="/synthese">Accéder au simulateur</CtaPrimary>
+            <CtaPrimary to="/demarrage">Accéder au simulateur</CtaPrimary>
             <Link
               to="/hypotheses"
               className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

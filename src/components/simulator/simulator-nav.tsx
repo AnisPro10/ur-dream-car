@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   SlidersHorizontal, LayoutDashboard, FileText, LineChart, BarChart3,
-  Columns3, Briefcase, Link2, Check, Printer,
+  Columns3, Briefcase, Link2, Check, Printer, Rocket, BookOpenText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { HealthIndicator } from "./health-indicator";
 
 // Hypothèses en tête : on saisit puis on consulte chaque rubrique.
 export const NAV_ITEMS = [
+  { to: "/demarrage", label: "Démarrage", icon: Rocket },
   { to: "/hypotheses", label: "Hypothèses", icon: SlidersHorizontal },
   { to: "/synthese", label: "Synthèse", icon: LayoutDashboard, exact: true as const },
   { to: "/compte-resultat", label: "Compte de résultat", icon: FileText },
@@ -20,6 +21,7 @@ export const NAV_ITEMS = [
   { to: "/scenarios", label: "Scénarios", icon: BarChart3 },
   { to: "/comparaison", label: "Comparaison", icon: Columns3 },
   { to: "/business", label: "Business & juridique", icon: Briefcase },
+  { to: "/dictionnaire", label: "Dictionnaire", icon: BookOpenText },
 ] as const;
 
 function ShareBar() {

@@ -201,6 +201,34 @@ test("decodeState : entree non base64 / JSON casse -> null sans throw", () => {
   expect(decodeState("pas-du-base64-!!")).toBeNull();
 });
 
+// ---- Nombre d'associes parametrable, synchronise partout ----
+test("nbAssocies : dividendes partages selon le nombre d'associes saisi", () => {
+  const prof = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, distrib: 100 };
+  const a3 = computeModel({ ...prof, nbAssocies: 3 });
+  const a4 = computeModel({ ...prof, nbAssocies: 4 });
+  approx(a3.nAssoc, 3); approx(a4.nAssoc, 4);
+  approx(a3.revenuDirigeant, a3.divNet / 3);
+  approx(a4.revenuDirigeant, a4.divNet / 4);
+  // SASU ignore nbAssocies : toujours unipersonnelle
+  const su = computeModel({ ...prof, statut: "SASU", nbAssocies: 5 });
+  approx(su.nAssoc, 1);
+  approx(su.revenuDirigeant, su.divNet);
+});
+
+test("simulerRemuneration : plusieurs associes remuneres (cout x N)", () => {
+  // 3 associes remuneres a 5 600 net en SARL : cout = 3 x 5600 x 1,45 (cotis min couverte)
+  const r = simulerRemuneration(30000, 18000, "SARL", 5600, { nbAssocies: 3, nbRemuneres: 3 });
+  approx(r.salaireTotal, 16800);
+  approx(r.chargesSoc, 16800 * 0.45);
+  approx(r.cotisMin, 0); // gerant remunere : ses cotisations (2520) depassent le plancher
+  approx(r.coutSalaire, 16800 * 1.45);
+  approx(r.baseIS, 30000 - 16800 * 1.45);
+  // SASU : nbRemuneres plafonne a 1 associe
+  const su = simulerRemuneration(30000, 18000, "SASU", 5600, { nbAssocies: 3, nbRemuneres: 3 });
+  approx(su.nbRemuneres, 1);
+  approx(su.salaireTotal, 5600);
+});
+
 // ---- Simulation juridique : parite avec le fichier Excel corrige (benefice 30 000, capital 18 000) ----
 test("simulerRemuneration SARL tous dividendes = Excel corrige (10 769,89)", () => {
   const r = simulerRemuneration(30000, 18000, "SARL", 0);

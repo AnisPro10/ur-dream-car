@@ -71,6 +71,23 @@ export function NumberField({
   );
 }
 
+// Champ texte simple (nom, prénom…) assorti au style des champs numériques.
+export function TextField({
+  label, value, set, placeholder, maxLength = 60,
+}: { label: string; value: string; set: (v: string) => void; placeholder?: string; maxLength?: number }) {
+  const id = useId();
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-xs font-medium text-foreground/80">{label}</label>
+      <input
+        id={id} type="text" value={value} placeholder={placeholder} maxLength={maxLength}
+        onChange={(e) => set(e.target.value)}
+        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground outline-none transition-shadow placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring"
+      />
+    </div>
+  );
+}
+
 function Segmented<T extends string>({
   label, options, value, onChange, cols,
 }: { label: string; options: { v: T; label: string }[]; value: T | null; onChange: (v: T) => void; cols: string }) {
@@ -170,6 +187,19 @@ export function AssumptionsPanel({ s, update, reset, setPreset, presetIntact }: 
               {courtage ? "Commission sans achat : sans stock ni BFR." : "Achat puis revente : marge, stock, BFR."}
             </p>
           </div>
+        </div>
+
+        {/* Profil de la société — synchronisé avec Démarrage, la sim juridique et tout le simulateur */}
+        <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <TextField label="Prénom du dirigeant" value={s.dirigeantPrenom} set={update("dirigeantPrenom")} placeholder="ex. Samy" />
+          <TextField label="Nom du dirigeant" value={s.dirigeantNom} set={update("dirigeantNom")} placeholder="ex. Dupont" />
+          {s.statut !== "SASU" ? (
+            <NumberField label="Nombre d'associés" value={s.nbAssocies} set={update("nbAssocies")} min={2} max={10} step={1} unit="associés" hint="Les dividendes sont partagés entre eux." />
+          ) : (
+            <div className="self-end pb-1 text-[11px] text-muted-foreground leading-snug">
+              SASU = société unipersonnelle : un seul associé, pas de partage de dividendes.
+            </div>
+          )}
         </div>
       </Section>
 

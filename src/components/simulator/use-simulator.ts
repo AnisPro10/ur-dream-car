@@ -42,6 +42,8 @@ export type Hypotheses = {
   statut: Statut; remun: number; distrib: number; apresVente: number; cfe: number;
   mode: Mode;
   activite: Activite; commission: number; arce: number; pretHonneur: number;
+  // Profil de la société : synchronisé partout (démarrage, hypothèses, juridique, financier)
+  nbAssocies: number; dirigeantPrenom: string; dirigeantNom: string;
 };
 
 export const defaults: Hypotheses = {
@@ -51,7 +53,12 @@ export const defaults: Hypotheses = {
   statut: "SAS", remun: 0, distrib: 0, apresVente: 0, cfe: 0,
   mode: "prudent",
   activite: "stock", commission: 600, arce: 0, pretHonneur: 0,
+  nbAssocies: NB_ASSOCIES, dirigeantPrenom: "", dirigeantNom: "",
 };
+
+// SASU = unipersonnelle : toujours 1 associé, quel que soit le nombre saisi.
+export const nbAssociesEffectif = (s: Pick<Hypotheses, "statut" | "nbAssocies">) =>
+  s.statut === "SASU" ? 1 : Math.max(2, Math.round(s.nbAssocies));
 
 export interface ModelResult {
   courtage: boolean; ca: number; achats: number; margeBrute: number; tvaMarge: number; fraisVar: number;
@@ -95,7 +102,7 @@ export function computeModel(s: Hypotheses): ModelResult {
   const divFisc = isSarl ? divBelow * FLAT + divAbove * (PFU_IR + SARL_DIV) : divBrut * FLAT;
   const divNet = divBrut - divFisc;
   const netConserve = netSoc - divBrut;
-  const nAssoc = s.statut === "SASU" ? 1 : NB_ASSOCIES;
+  const nAssoc = nbAssociesEffectif(s);
   const revenuDirigeant = s.remun + divNet / nAssoc;
   const tMargeBrute = ca ? margeBrute / ca : 0;
   const tContribution = ca ? contribution / ca : 0;
@@ -151,22 +158,37 @@ export function isPresetIntact(s: Hypotheses): boolean {
 }
 
 // --- Simulation juridique de rémunération (réplique du fichier Excel juridique) ---
-// Pour un bénéfice annuel avant rémunération donné, compare comment le dirigeant
-// est payé selon le statut et le salaire net visé : coût du salaire, IS, dividendes
-// nets et revenu net du dirigeant. Mêmes règles fiscales 2026 que computeModel.
+// Pour un bénéfice annuel avant rémunération donné, compare comment les associés
+// sont payés selon le statut : coût des salaires (1 à N associés rémunérés), IS,
+// dividendes nets partagés et revenu net par associé. Règles 2026 = computeModel.
 export interface RemunResult {
-  statut: Statut; salaire: number; chargesSoc: number; cotisMin: number; coutSalaire: number;
+  statut: Statut; salaire: number; nbRemuneres: number; salaireTotal: number;
+  chargesSoc: number; cotisMin: number; coutSalaire: number;
   baseIS: number; is: number; distribuable: number; divBrut: number; divFisc: number; divNet: number;
-  nAssoc: number; revenuNetDirigeant: number; prelevements: number; tauxPrelevement: number;
+  nAssoc: number; revenuNetDirigeant: number; revenuAssocieNonRemunere: number;
+  prelevements: number; tauxPrelevement: number;
 }
 
 export function simulerRemuneration(
-  benefice: number, capital: number, statut: Statut, salaire: number, distrib = 100,
+  benefice: number, capital: number, statut: Statut, salaire: number,
+  opts: { distrib?: number; nbAssocies?: number; nbRemuneres?: number } = {},
 ): RemunResult {
+  const distrib = opts.distrib ?? 100;
   const isSarl = statut === "SARL";
-  const chargesSoc = salaire * (isSarl ? SARL_SOC : SAS_SOC);
-  const cotisMin = isSarl ? Math.max(0, COTIS_MIN - chargesSoc) : 0;
-  const coutSalaire = salaire + chargesSoc + cotisMin;
+  const nAssoc = statut === "SASU" ? 1 : Math.max(2, Math.round(opts.nbAssocies ?? NB_ASSOCIES));
+  // Combien d'associés prennent ce salaire net (0 = tous en dividendes) ; SASU = au plus 1.
+  const nbRemuneres = Math.min(
+    Math.max(0, Math.round(opts.nbRemuneres ?? (salaire > 0 ? 1 : 0))),
+    nAssoc,
+  );
+  const salaireTotal = salaire * nbRemuneres;
+  const chargesSoc = salaireTotal * (isSarl ? SARL_SOC : SAS_SOC);
+  // Cotisations minimales : dues par le gérant majoritaire TNS (une personne),
+  // même sans rémunération ; couvertes par ses propres cotisations s'il est salarié.
+  const cotisMin = isSarl
+    ? Math.max(0, COTIS_MIN - (nbRemuneres > 0 ? salaire * SARL_SOC : 0))
+    : 0;
+  const coutSalaire = salaireTotal + chargesSoc + cotisMin;
   const baseIS = Math.max(benefice - coutSalaire, 0);
   const is = isTax(baseIS);
   const distribuable = baseIS - is;
@@ -176,13 +198,14 @@ export function simulerRemuneration(
   const divAbove = Math.max(0, divBrut - seuilDiv);
   const divFisc = isSarl ? divBelow * FLAT + divAbove * (PFU_IR + SARL_DIV) : divBrut * FLAT;
   const divNet = divBrut - divFisc;
-  const nAssoc = statut === "SASU" ? 1 : NB_ASSOCIES;
-  const revenuNetDirigeant = salaire + divNet / nAssoc;
+  const revenuNetDirigeant = (nbRemuneres > 0 ? salaire : 0) + divNet / nAssoc;
+  const revenuAssocieNonRemunere = divNet / nAssoc;
   const prelevements = chargesSoc + cotisMin + is + divFisc;
   const tauxPrelevement = benefice > 0 ? prelevements / benefice : 0;
   return {
-    statut, salaire, chargesSoc, cotisMin, coutSalaire, baseIS, is, distribuable,
-    divBrut, divFisc, divNet, nAssoc, revenuNetDirigeant, prelevements, tauxPrelevement,
+    statut, salaire, nbRemuneres, salaireTotal, chargesSoc, cotisMin, coutSalaire,
+    baseIS, is, distribuable, divBrut, divFisc, divNet, nAssoc,
+    revenuNetDirigeant, revenuAssocieNonRemunere, prelevements, tauxPrelevement,
   };
 }
 
@@ -208,6 +231,8 @@ const hypothesesSchema = z.object({
   cfe: numFini.min(0).max(1_000_000), mode: z.enum(["prudent", "realiste"]),
   activite: z.enum(["stock", "courtage"]), commission: numFini.min(0).max(1_000_000),
   arce: numFini.min(0).max(10_000_000), pretHonneur: numFini.min(0).max(10_000_000),
+  nbAssocies: numFini.min(1).max(10),
+  dirigeantPrenom: z.string().trim().max(60), dirigeantNom: z.string().trim().max(60),
 }).partial();
 
 function safe(parsed: unknown): Partial<Hypotheses> | null {

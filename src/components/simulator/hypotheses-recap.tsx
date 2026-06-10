@@ -3,16 +3,21 @@ import { SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSim } from "./simulator-context";
+import { nbAssociesEffectif } from "./use-simulator";
 
 // Rappel compact des hypothèses courantes affiché sur toutes les pages sauf /hypotheses.
 export function HypothesesRecap() {
   const { s, presetIntact } = useSim();
   const modeLabel = presetIntact ? (s.mode === "realiste" ? "Réaliste" : "Prudent") : "Personnalisé";
+  const dirigeant = `${s.dirigeantPrenom} ${s.dirigeantNom}`.trim();
+  const nAssoc = nbAssociesEffectif(s);
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <span className="text-muted-foreground">Hypothèses :</span>
+        {dirigeant && <Badge variant="secondary">Dirigeant : {dirigeant}</Badge>}
         <Badge variant="secondary">{s.statut}</Badge>
+        <Badge variant="secondary">{nAssoc === 1 ? "Unipersonnelle" : nAssoc + " associés"}</Badge>
         <Badge variant="secondary">{s.activite === "courtage" ? "Courtage" : "Stock"}</Badge>
         <Badge variant="secondary">Mode {modeLabel}</Badge>
         <Badge variant="secondary">{s.volume} {s.activite === "courtage" ? "mandats" : "v."}/an</Badge>
