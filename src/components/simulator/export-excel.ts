@@ -1,5 +1,5 @@
 import type { Sim } from "./simulator-context";
-import { projeter3ans, pct } from "./use-simulator";
+import { projeter5ans, pct } from "./use-simulator";
 
 // Export d'un vrai classeur Excel (.xlsx) mis en forme : feuilles séparées, titres,
 // en-têtes colorés, formats € / %, largeurs de colonnes, négatifs en rouge.
@@ -137,17 +137,17 @@ export async function downloadExcel(sim: Sim) {
   });
   dataRow(wsT, "Point bas", [m.pointBas, ""], { strong: true });
 
-  // ---- Feuille 4 : Projection 3 ans ----
-  const wsP = wb.addWorksheet("Projection 3 ans", { views: [{ showGridLines: false }] });
-  wsP.columns = [{ width: 30 }, { width: 16 }, { width: 16 }, { width: 16 }];
-  title(wsP, 4, "Projection sur 3 ans");
-  subtitle(wsP, 4, `Croissance ${s.croissance} %/an  ·  ACRE année 1 ${s.acre ? "activée" : "non"}  ·  CFE dès l'année 2`);
-  section(wsP, 4, "Compte de résultat prévisionnel");
-  header(wsP, ["Indicateur", "Année 1", "Année 2", "Année 3"]);
-  const p = projeter3ans(s);
+  // ---- Feuille 4 : Projection 5 ans ----
+  const wsP = wb.addWorksheet("Projection 5 ans", { views: [{ showGridLines: false }] });
+  wsP.columns = [{ width: 30 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }];
+  title(wsP, 6, "Projection sur 5 ans");
+  subtitle(wsP, 6, `Croissance ${s.croissance2}/${s.croissance3}/${s.croissance4}/${s.croissance5} %  ·  ACRE année 1 ${s.acre ? "activée" : "non"}  ·  CFE dès l'année 2`);
+  section(wsP, 6, "Compte de résultat prévisionnel");
+  header(wsP, ["Indicateur", "Année 1", "Année 2", "Année 3", "Année 4", "Année 5"]);
+  const p = projeter5ans(s);
   const P = (label: string, get: (a: typeof p[number]) => number, opts: RowOpts = {}) =>
-    dataRow(wsP, label, [get(p[0]), get(p[1]), get(p[2])], opts);
-  P("Volume", (a) => a.volume, { fmt: INT });
+    dataRow(wsP, label, p.map(get) as number[], opts);
+  P("Volume", (a) => Math.round(a.volume * 10) / 10, { fmt: "0.0" });
   P("Chiffre d'affaires", (a) => a.ca, { zebra: true });
   P("Contribution", (a) => a.contribution);
   P("CFE", (a) => -a.cfe, { zebra: true });
@@ -181,8 +181,9 @@ export async function downloadExcel(sim: Sim) {
   H("Prêt d'honneur", s.pretHonneur, EUR);
   H("Rémunération nette dirigeant", s.remun, EUR, true);
   H("Part du résultat en dividendes (%)", s.distrib, INT);
-  H("Croissance du volume (%/an)", s.croissance, INT, true);
-  H("ACRE année 1", s.acre ? "Oui" : "Non");
+  H("Croissance volume années 2-5 (%)", `${s.croissance2} / ${s.croissance3} / ${s.croissance4} / ${s.croissance5}`, undefined, true);
+  H("Rémunération années 2-5 (€)", `${s.remunA2} / ${s.remunA3} / ${s.remunA4} / ${s.remunA5}`);
+  H("ACRE année 1", s.acre ? "Oui" : "Non", undefined, true);
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });

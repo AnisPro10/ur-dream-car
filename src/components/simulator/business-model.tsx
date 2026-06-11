@@ -77,10 +77,10 @@ export function BusinessModel() {
           title="Modèle financier"
           accentClass="border-l-[var(--color-chart-3)]"
           points={[
-            { k: "Marge réelle / voiture", v: "Entrée de gamme ≈ −102 €/voiture (perte), Crit'Air 2 ≈ +315 €, après TVA sur marge et frais variables (935 €, dont 700 € de garantie). Seul le Crit'Air 2 est rentable." },
-            { k: "Structure", v: "Charges fixes ~500 €/mois (prudent) à ~1 264 €/mois (réaliste). Seuil de rentabilité ≈ 257 voitures/an : la marge par voiture est trop faible." },
-            { k: "Année 1", v: "CA ≈ 152 400 € ; résultat net ≈ −5 440 € (prudent) à −16 410 € (réaliste). BFR ≈ 22 540 € > capital 18 000 € : sous-capitalisation." },
-            { k: "Verdict", v: "Le modèle « parc d'entrée de gamme » est déficitaire une fois honnêtement chiffré. La voie viable : démarrer en courtage (sans stock), améliorer le sourcing, basculer vers le Crit'Air 2." },
+            { k: "Marge réelle / voiture", v: "Avec les prix de l'étude initiale (achat 4 000 → revente 5 000), l'entrée de gamme perdait ~102 €/voiture. Le paramétrage actuel des associés (sourcing 2 500 → 3 200, garantie 100 €) la rend positive ≈ +248 € ; le 2ᵉ segment ≈ +498 €." },
+            { k: "Structure", v: "Charges fixes ~400 €/mois (dont assurance 250 € — valeur marché). Seuil de rentabilité ≈ 18 voitures/an avec le paramétrage actuel (il était de 257 avec les hypothèses de l'étude initiale)." },
+            { k: "Année 1", v: "Paramétrage actuel : CA ≈ 78 720 € ; résultat net ≈ +1 496 € ; BFR ≈ 11 140 € couvert par 20 000 € de capital. Scénario réaliste (toutes charges) : ≈ −24 810 €." },
+            { k: "Verdict", v: "Le modèle ne tient que si le sourcing à bas prix (2 500 €) et la provision garantie réduite (100 €) se confirment sur le terrain. Sinon, retour au plan prudent : démarrer en courtage (≈ +2 346 € sans stock ni BFR)." },
           ]}
         />
       </div>

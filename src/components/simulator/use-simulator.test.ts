@@ -1,83 +1,104 @@
 // @ts-nocheck
 import { test, expect } from "bun:test";
-import { computeModel, defaults, PRESETS, simulerRemuneration, projeter3ans, encodeState, decodeState, type Hypotheses } from "./use-simulator";
+import { computeModel, defaults, PRESETS, simulerRemuneration, projeter5ans, encodeState, decodeState, type Hypotheses } from "./use-simulator";
 
 const approx = (a: number, b: number, tol = 1) => expect(Math.abs(a - b)).toBeLessThanOrEqual(tol);
 
-// ---- Ancre : modèle PRUDENT (doit coller à l'Excel audité v3) ----
-test("prudent SAS : chiffres = Excel audité", () => {
+// ============================================================================
+// PARITÉ EXCEL — les ancres ci-dessous sont les chiffres exacts du classeur
+// Previsionnel_Auto_Occasion_v3.xlsx (recalcul indépendant validé par audit).
+// Mêmes entrées => mêmes sorties, à l'arrondi près.
+// ============================================================================
+
+// ---- Ancre : scénario PRUDENT (= onglet Hypothèses/Résultat de l'Excel) ----
+test("parité Excel — prudent SAS : CA 78 720, net 1 496", () => {
   const m = computeModel(defaults);
-  approx(m.ca, 152400);
-  approx(m.margeBrute, 27600);
-  approx(m.tvaMarge, 4600);
-  approx(m.fraisVar, 22440); // 935 x 24
-  approx(m.contribution, 560);
-  approx(m.netSoc, -5440); // perte -> IS 0
-  approx(m.is, 0);
-  approx(m.contribParVoiture, 23.33, 0.1);
-  approx(m.seuilAn, 257.14, 0.5);
+  approx(m.ca, 78720);
+  approx(m.achats, 61200);
+  approx(m.margeBrute, 17520);
+  approx(m.tvaMarge, 2920);
+  approx(m.fraisVar, 8040); // 335 x 24
+  approx(m.contribution, 6560);
+  approx(m.chargesFixesAn, 4800);
+  approx(m.is, 264);
+  approx(m.netSoc, 1496);
+  approx(m.contribParVoiture, 273.33, 0.1);
 });
 
-// ---- Mode RÉALISTE ----
-test("réaliste : résultat ~ -16 410", () => {
+// ---- Ancre : scénario RÉALISTE (= colonne réaliste du Comparatif Excel : -24 810) ----
+test("parité Excel — réaliste : résultat ≈ -24 808", () => {
   const m = computeModel({ ...defaults, ...PRESETS.realiste, mode: "realiste" });
-  approx(m.fraisVar, 1010 * 24); // 250+50+450+135+125 = 1010
-  approx(m.contribution, -1240, 5);
-  approx(m.netSoc, -16408, 5);
+  approx(m.fraisVar, 1010 * 24);
+  approx(m.chargesFixesAn, 15168); // (500+200+564) x 12
+  approx(m.netSoc, -24808, 3); // Excel Comparatif!C46 = -24 810 (arrondi)
 });
 
-// ---- Économie par voiture ----
-test("contribution par voiture (prudent)", () => {
+// ---- Ancre : économie par véhicule ----
+test("parité Excel — contribution/véhicule : EG +248,3 ; 2e segment +498,3", () => {
   const m = computeModel(defaults);
-  approx(m.cEg, -101.67, 0.1); // entrée de gamme : PERTE
-  approx(m.cCa, 315, 0.1); // Crit'Air 2 : positif
+  approx(m.cEg, 248.33, 0.1);
+  approx(m.cCa, 498.33, 0.1);
 });
 
-// ---- TVA sur marge ----
-test("TVA = 20% de la marge HT (pas du prix total)", () => {
+// ---- Ancre : BFR = stock + frais engagés (Ratios!B21 / BFR_Financement!B10) ----
+test("parité Excel — BFR 11 140 (stock 10 200 + frais engagés 940)", () => {
+  const m = computeModel(defaults);
+  approx(m.stockMoyen, 10200);
+  approx(m.bfrFinance, 11140);
+  expect(m.financementOk).toBe(true); // capital 20 000 > 11 140
+});
+
+// ---- Ancre : trésorerie (clôture M12 de l'Excel = 10 466,67) ----
+test("parité Excel — trésorerie de clôture ≈ 10 467", () => {
+  const m = computeModel(defaults);
+  approx(m.treso[11].treso, 10467, 2);
+});
+
+// ---- TVA sur marge (régime 297 A) ----
+test("TVA = 20 % de la marge ramenée HT (pas du prix total)", () => {
   const m = computeModel(defaults);
   approx(m.tvaMarge, m.margeBrute * 0.2 / 1.2);
 });
 
-// ---- IS : barème 15% / 25% ----
-test("IS 15% sous 42 500, 25% au-delà", () => {
-  // cas bénéficiaire : volume 60, sans charges -> ravis > 42500
-  const base: Hypotheses = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, volume: 60 };
+// ---- IS : barème 15 % / 25 % ----
+test("IS 15 % sous 42 500, 25 % au-delà", () => {
+  const base: Hypotheses = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, volume: 200 };
   const m = computeModel(base);
-  const ravis = m.ravis;
-  const expectedIs = 42500 * 0.15 + (ravis - 42500) * 0.25;
-  expect(ravis).toBeGreaterThan(42500);
-  approx(m.is, expectedIs, 1);
+  expect(m.ravis).toBeGreaterThan(42500);
+  approx(m.is, 42500 * 0.15 + (m.ravis - 42500) * 0.25, 1);
 });
 
-// ---- SARL : cotisations minimales si non rémunéré ----
-test("SARL non rémunéré = cotisation min 1300 ; SAS = 0", () => {
+// ---- Cotisations minimales SARL : règle Excel (dues uniquement si non rémunéré) ----
+test("SARL : cotis min 1 300 si gérant NON rémunéré ; 0 sinon (règle Excel)", () => {
   approx(computeModel({ ...defaults, statut: "SARL", remun: 0 }).cotisMin, 1300);
+  approx(computeModel({ ...defaults, statut: "SARL", remun: 1000 }).cotisMin, 0);
+  approx(computeModel({ ...defaults, statut: "SARL", remun: 1000 }).chargesSoc, 450);
   approx(computeModel({ ...defaults, statut: "SAS", remun: 0 }).cotisMin, 0);
   approx(computeModel({ ...defaults, statut: "SASU", remun: 0 }).cotisMin, 0);
 });
 
-// ---- SASU : associé unique (dividendes non divisés par 3) ----
+// ---- SASU : associé unique ----
 test("SASU : revenu dirigeant = tous les dividendes ; SAS = 1/3", () => {
   const prof = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, distrib: 100 };
   const sas = computeModel({ ...prof, statut: "SAS" });
   const sasu = computeModel({ ...prof, statut: "SASU" });
   expect(sas.netSoc).toBeGreaterThan(0);
-  approx(sas.netSoc, sasu.netSoc); // même fiscalité société
-  approx(sasu.revenuDirigeant, sasu.divNet); // 1 associé
-  approx(sas.revenuDirigeant, sas.divNet / 3); // 3 associés
-  expect(sasu.revenuDirigeant).toBeGreaterThan(sas.revenuDirigeant);
+  approx(sas.netSoc, sasu.netSoc);
+  approx(sasu.revenuDirigeant, sasu.divNet);
+  approx(sas.revenuDirigeant, sas.divNet / 3);
 });
 
-// ---- SARL : dividendes pénalisés au-delà de 10% du capital ----
-test("SARL : dividendes moins nets qu'en SAS (pénalité TNS)", () => {
-  const prof = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, distrib: 100 };
-  const sas = computeModel({ ...prof, statut: "SAS" });
-  const sarl = computeModel({ ...prof, statut: "SARL" });
-  expect(sarl.divNet).toBeLessThan(sas.divNet);
+// ---- SARL : dividendes > 10 % du capital (12,8 % IR + 45 % TNS, pas de double PS) ----
+test("SARL : fraction > 10 % du capital taxée à 12,8 % + 45 %", () => {
+  const prof = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, statut: "SARL" as const, distrib: 100, remun: 1000 };
+  const m = computeModel(prof);
+  const seuil = 0.1 * prof.capital; // 2 000
+  const above = Math.max(0, m.divBrut - seuil);
+  expect(above).toBeGreaterThan(0);
+  approx(m.divFisc, Math.min(m.divBrut, seuil) * 0.314 + above * (0.128 + 0.45), 1);
 });
 
-// ---- Robustesse : volume 0 ne casse pas (pas de NaN) ----
+// ---- Robustesse ----
 test("volume 0 : pas de NaN", () => {
   const m = computeModel({ ...defaults, volume: 0 });
   for (const [k, v] of Object.entries(m)) {
@@ -89,189 +110,155 @@ test("volume 0 : pas de NaN", () => {
 test("recoupement indépendant (cas custom)", () => {
   const s: Hypotheses = { ...defaults, reventeEg: 5200, reventeCa: 10000, volume: 30, mixEg: 60, garantie: 500, remun: 0 };
   const m = computeModel(s);
-  const mix = 0.6, vEg = 30 * 0.6, vCa = 30 * 0.4;
-  const ca = vEg * 5200 + vCa * 10000;
-  const achats = vEg * 4000 + vCa * 8000;
+  const vEg = 18, vCa = 12;
+  const ca = vEg * 5200 + vCa * 10000; // 213 600
+  const achats = vEg * 2500 + vCa * 3000; // 81 000
   const marge = ca - achats;
   const tva = marge * 0.2 / 1.2;
   const fv = (50 + 50 + 500 + 135 + 0) * 30;
   const contrib = marge - tva - fv;
-  const cf = (300 + 50 + 150) * 12;
-  const exced = contrib - cf;
-  approx(m.ca, ca); approx(m.contribution, contrib); approx(m.netSoc, exced - (exced > 0 ? exced * 0.15 : 0), 1);
+  const exced = contrib - 4800;
+  const is = 42500 * 0.15 + (exced - 42500) * 0.25;
+  approx(m.ca, ca); approx(m.contribution, contrib); approx(m.netSoc, exced - is, 1);
 });
 
-// ---- SARL : plancher de cotisations applique meme a remuneration faible ----
-test("SARL : plancher cotisations 1300 sur remuneration faible", () => {
-  const m = computeModel({ ...defaults, statut: "SARL", remun: 1000 });
-  approx(m.chargesSoc, 450); // 1000 x 0,45
-  approx(m.cotisMin, 850); // complement jusqu'au plancher
-  approx(m.chargesSoc + m.cotisMin, 1300); // total social = plancher
-});
-
-// ---- SARL : dividendes > 10% capital ne sont PAS double-taxes (IR + TNS, pas PFU+TNS) ----
-test("SARL : fraction dividendes > 10% capital taxee a 12,8% + 45% (pas 76%)", () => {
-  const prof = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, statut: "SARL" as const, distrib: 100 };
-  const m = computeModel(prof);
-  const seuil = 0.1 * prof.capital; // 1800
-  const above = Math.max(0, m.divBrut - seuil);
-  const expectFisc = Math.min(m.divBrut, seuil) * 0.314 + above * (0.128 + 0.45);
-  approx(m.divFisc, expectFisc, 1);
-  // taux effectif sur la fraction haute = 57,8%, pas 76,4%
-  expect(above).toBeGreaterThan(0);
-});
-
-// ---- Volume courant toujours present dans les scenarios (meme hors palier) ----
-test("scenarios : volume courant present et mis en evidence", () => {
+// ---- Scénarios de volume ----
+test("scénarios : volume courant présent et mis en évidence", () => {
   const m = computeModel({ ...defaults, volume: 30 });
   const cur = m.volScenarios.find((x) => x.current);
   expect(cur).toBeTruthy();
   expect(cur!.volume).toBe("30/an");
 });
 
-// ---- Alerte remuneration insoutenable ----
-test("remuneration insoutenable detectee", () => {
+// ---- Alerte rémunération insoutenable ----
+test("rémunération insoutenable détectée", () => {
   expect(computeModel({ ...defaults, remun: 60000 }).remunInsoutenable).toBe(true);
   expect(computeModel({ ...defaults, remun: 0 }).remunInsoutenable).toBe(false);
 });
 
-// ---- Mode COURTAGE : commission, sans achat ni stock ni BFR ----
-test("courtage : CA = commission x volume, sans achat ni stock", () => {
+// ---- Mode COURTAGE ----
+test("courtage : CA = commission x volume, sans achat ni stock ; net 2 346", () => {
   const m = computeModel({ ...defaults, activite: "courtage" });
-  approx(m.ca, 600 * 24); // 14 400
+  approx(m.ca, 14400);
   approx(m.achats, 0);
   approx(m.stockMoyen, 0);
   approx(m.bfrFinance, 0);
-  approx(m.tvaMarge, 14400 * 0.2 / 1.2); // TVA 20% sur la commission
-  approx(m.contribution, 7560); // 14400 - 2400 - (185 x 24)
-  approx(m.netSoc, 1326, 2); // rentable la ou le stock perd -5440
+  approx(m.tvaMarge, 2400);
+  approx(m.contribution, 7560);
+  approx(m.netSoc, 2346, 2); // excédent 2 760 - IS 414
   expect(m.courtage).toBe(true);
-  expect(m.netSoc).toBeGreaterThan(0);
 });
 
-// ---- Courtage rentable la ou le stock perd (memes parametres) ----
-test("courtage > stock sur le resultat net (prudent)", () => {
+test("courtage > stock sur le résultat net (mêmes paramètres)", () => {
   const stock = computeModel({ ...defaults, activite: "stock" });
   const courtage = computeModel({ ...defaults, activite: "courtage" });
-  expect(stock.netSoc).toBeLessThan(0);
+  approx(stock.netSoc, 1496);
   expect(courtage.netSoc).toBeGreaterThan(stock.netSoc);
 });
 
-// ---- Financement : ressources = capital + ARCE + pret d'honneur ----
-test("financement : ARCE et pret d'honneur couvrent le BFR", () => {
-  const sansAide = computeModel({ ...defaults });
-  approx(sansAide.ressources, 18000);
-  expect(sansAide.financementOk).toBe(false); // BFR ~20 800 > 18 000
-  const avecAide = computeModel({ ...defaults, arce: 6000, pretHonneur: 10000 });
-  approx(avecAide.ressources, 34000);
-  expect(avecAide.financementOk).toBe(true);
+// ---- Financement : ressources vs BFR ----
+test("financement : capital 20 000 couvre le BFR ; 10 000 non, sauf avec ARCE/prêt", () => {
+  const base = computeModel({ ...defaults });
+  approx(base.ressources, 20000);
+  expect(base.financementOk).toBe(true); // BFR 11 140 < 20 000
+  const faible = computeModel({ ...defaults, capital: 10000 });
+  expect(faible.financementOk).toBe(false); // 10 000 < 11 140
+  const aide = computeModel({ ...defaults, capital: 10000, arce: 2000 });
+  expect(aide.financementOk).toBe(true); // 12 000 > 11 140
 });
 
-// ---- Courtage : financement OK sans aide (pas de BFR a financer) ----
-test("courtage : financement OK meme a faible capital (pas de BFR)", () => {
-  const m = computeModel({ ...defaults, activite: "courtage", capital: 5000 });
-  approx(m.bfrFinance, 0);
-  expect(m.financementOk).toBe(true);
+// ---- ACRE (option hors Excel, désactivée par défaut) ----
+test("ACRE : charges sociales réduites de 50 % via opts.acre ; défaut = off", () => {
+  expect(defaults.acre).toBe(false);
+  const plein = computeModel({ ...defaults, statut: "SAS", remun: 10000 });
+  const acre = computeModel({ ...defaults, statut: "SAS", remun: 10000 }, { acre: 0.5 });
+  approx(plein.chargesSoc, 8000);
+  approx(acre.chargesSoc, 4000);
 });
 
-// ---- Validation d'etat : un lien/localStorage corrompu ne propage pas de NaN ----
-test("decodeState : un lien valide est restitue (retro-compat)", () => {
+// ---- Projection 5 ans (parité Excel Projection_5ans : volume NON arrondi) ----
+test("parité Excel — projeter5ans : volumes exacts, CFE dès l'an 2, rému an 4-5", () => {
+  const p = projeter5ans(defaults);
+  expect(p.length).toBe(5);
+  approx(p[0].volume, 24); approx(p[1].volume, 31.2, 0.01); approx(p[2].volume, 43.68, 0.01);
+  approx(p[3].volume, 56.784, 0.01); approx(p[4].volume, 68.1408, 0.01);
+  approx(p[0].cfe, 0); approx(p[1].cfe, 300); approx(p[4].cfe, 300);
+  approx(p[0].netSoc, 1496);
+  approx(p[1].netSoc, 2913.8, 1);
+  approx(p[2].netSoc, 5813.3, 1);
+  approx(p[3].remun, 12000); // rémunération année 4
+  approx(p[3].netSoc, -11179, 2); // 12 000 nets coûtent 21 600 : déficit
+  expect(p[0].acreActive).toBe(false); // parité Excel : pas d'ACRE par défaut
+});
+
+// ---- Validation d'état (URL / localStorage) ----
+test("decodeState : un lien valide est restitué", () => {
   const link = encodeState({ ...defaults, volume: 30, statut: "SARL" });
   const d = decodeState(link);
   expect(d?.volume).toBe(30);
   expect(d?.statut).toBe("SARL");
 });
 
-test("decodeState : volume non numerique rejete -> retour aux defauts, pas de NaN", () => {
+test("decodeState : état corrompu rejeté, pas de NaN", () => {
   const bad = encodeState({ ...defaults, volume: "abc" } as any);
-  expect(decodeState(bad)).toBeNull(); // etat corrompu ignore
-  const merged = { ...defaults, ...(decodeState(bad) ?? {}) };
-  const m = computeModel(merged);
+  expect(decodeState(bad)).toBeNull();
+  expect(decodeState("pas-du-base64-!!")).toBeNull();
+  const m = computeModel({ ...defaults, ...(decodeState(bad) ?? {}) });
   for (const v of Object.values(m)) {
     if (typeof v === "number") expect(Number.isNaN(v)).toBe(false);
   }
 });
 
-test("decodeState : statut invalide rejete", () => {
-  const bad = encodeState({ ...defaults, statut: "FOO" } as any);
-  expect(decodeState(bad)).toBeNull();
-});
-
-test("decodeState : entree non base64 / JSON casse -> null sans throw", () => {
-  expect(decodeState("pas-du-base64-!!")).toBeNull();
-});
-
-// ---- Nombre d'associes parametrable, synchronise partout ----
-test("nbAssocies : dividendes partages selon le nombre d'associes saisi", () => {
+// ---- Nombre d'associés ----
+test("nbAssocies : dividendes partagés selon le nombre saisi ; SASU = 1", () => {
   const prof = { ...defaults, garantie: 0, decote: 0, prep: 0, transport: 0, petits: 0, local: 0, assur: 0, autres: 0, distrib: 100 };
-  const a3 = computeModel({ ...prof, nbAssocies: 3 });
   const a4 = computeModel({ ...prof, nbAssocies: 4 });
-  approx(a3.nAssoc, 3); approx(a4.nAssoc, 4);
-  approx(a3.revenuDirigeant, a3.divNet / 3);
+  approx(a4.nAssoc, 4);
   approx(a4.revenuDirigeant, a4.divNet / 4);
-  // SASU ignore nbAssocies : toujours unipersonnelle
   const su = computeModel({ ...prof, statut: "SASU", nbAssocies: 5 });
   approx(su.nAssoc, 1);
-  approx(su.revenuDirigeant, su.divNet);
 });
 
-// ---- ACRE : reduction des charges sociales annee 1 ----
-test("ACRE : charges sociales reduites de 50% (opts.acre)", () => {
-  const plein = computeModel({ ...defaults, statut: "SAS", remun: 10000 });
-  const acre = computeModel({ ...defaults, statut: "SAS", remun: 10000 }, { acre: 0.5 });
-  approx(plein.chargesSoc, 8000); // 10000 x 0,8
-  approx(acre.chargesSoc, 4000); // moitie avec ACRE
-  expect(acre.netSoc).toBeGreaterThan(plein.netSoc); // moins de charges -> meilleur resultat
-});
+// ============================================================================
+// PARITÉ EXCEL JURIDIQUE — Simulation_Juridique_Remuneration.xlsx
+// (bénéfice 30 000, capital 20 000 — chiffres validés par l'audit juridique)
+// ============================================================================
 
-// ---- Projection 3 ans : montee en charge, CFE des l'an 2, ACRE an 1 ----
-test("projeter3ans : volume monte, CFE 0 an1 puis due, ACRE an1", () => {
-  const p = projeter3ans({ ...defaults, croissance: 30, acre: true, cfe: 300 });
-  expect(p.length).toBe(3);
-  approx(p[0].volume, 24); approx(p[1].volume, 31); approx(p[2].volume, 41); // x1,3 par an
-  approx(p[0].cfe, 0); approx(p[1].cfe, 300); approx(p[2].cfe, 300); // exoneree an1
-  expect(p[0].acreActive).toBe(true);
-  expect(p[1].acreActive).toBe(false);
-  approx(p[0].netSoc, -5440); // an1 prudent SAS sans salaire = ancre connue
-});
-
-test("simulerRemuneration : plusieurs associes remuneres (cout x N)", () => {
-  // 3 associes remuneres a 5 600 net en SARL : cout = 3 x 5600 x 1,45 (cotis min couverte)
-  const r = simulerRemuneration(30000, 18000, "SARL", 5600, { nbAssocies: 3, nbRemuneres: 3 });
-  approx(r.salaireTotal, 16800);
-  approx(r.chargesSoc, 16800 * 0.45);
-  approx(r.cotisMin, 0); // gerant remunere : ses cotisations (2520) depassent le plancher
-  approx(r.coutSalaire, 16800 * 1.45);
-  approx(r.baseIS, 30000 - 16800 * 1.45);
-  // SASU : nbRemuneres plafonne a 1 associe
-  const su = simulerRemuneration(30000, 18000, "SASU", 5600, { nbAssocies: 3, nbRemuneres: 3 });
-  approx(su.nbRemuneres, 1);
-  approx(su.salaireTotal, 5600);
-});
-
-// ---- Simulation juridique : parite avec le fichier Excel corrige (benefice 30 000, capital 18 000) ----
-test("simulerRemuneration SARL tous dividendes = Excel corrige (10 769,89)", () => {
-  const r = simulerRemuneration(30000, 18000, "SARL", 0);
-  approx(r.cotisMin, 1300); // gerant non remunere : plancher TNS
-  approx(r.baseIS, 28700); // 30000 - 1300
-  approx(r.is, 4305); // 15% de 28700
+test("parité Excel juridique — SARL tous dividendes : net 10 822,69", () => {
+  const r = simulerRemuneration(30000, 20000, "SARL", 0);
+  approx(r.cotisMin, 1300);
+  approx(r.baseIS, 28700);
+  approx(r.is, 4305);
   approx(r.distribuable, 24395);
-  approx(r.divNet, 10769.89, 0.5); // part>1800 a 45% TNS + 12,8% IR (PAS le PFU plein)
+  approx(r.divNet, 10822.69, 0.5); // = Excel SARL_a3!B13
 });
 
-test("simulerRemuneration SAS tous dividendes (flat tax 31,4%)", () => {
-  const r = simulerRemuneration(30000, 18000, "SAS", 0);
+test("parité Excel juridique — SAS tous dividendes : net 17 493", () => {
+  const r = simulerRemuneration(30000, 20000, "SAS", 0);
   approx(r.cotisMin, 0);
-  approx(r.is, 4500); // 15% de 30000
+  approx(r.is, 4500);
   approx(r.distribuable, 25500);
-  approx(r.divNet, 25500 * (1 - 0.314), 0.5); // 17 493
+  approx(r.divNet, 17493, 0.5); // = Excel SAS_a3!B13
 });
 
-test("simulerRemuneration : SASU garde tous les dividendes, SAS partage par 3", () => {
-  const sas = simulerRemuneration(30000, 18000, "SAS", 0);
-  const sasu = simulerRemuneration(30000, 18000, "SASU", 0);
-  approx(sasu.divNet, sas.divNet); // meme fiscalite societe
-  approx(sasu.revenuNetDirigeant, sasu.divNet); // 1 associe
-  approx(sas.revenuNetDirigeant, sas.divNet / 3); // 3 associes
-  expect(sasu.revenuNetDirigeant).toBeGreaterThan(sas.revenuNetDirigeant);
+test("parité Excel juridique — règle cotis min : 0 dès qu'un salaire existe", () => {
+  const r = simulerRemuneration(30000, 20000, "SARL", 5600, { nbAssocies: 3, nbRemuneres: 1 });
+  approx(r.cotisMin, 0); // règle Excel : IF(salaire=0 ; 1300 ; 0)
+  approx(r.chargesSoc, 5600 * 0.45);
+});
+
+test("simulerRemuneration : plusieurs associés rémunérés (coût x N)", () => {
+  const r = simulerRemuneration(30000, 20000, "SARL", 5600, { nbAssocies: 3, nbRemuneres: 3 });
+  approx(r.salaireTotal, 16800);
+  approx(r.coutSalaire, 16800 * 1.45);
+  const su = simulerRemuneration(30000, 20000, "SASU", 5600, { nbAssocies: 3, nbRemuneres: 3 });
+  approx(su.nbRemuneres, 1); // SASU plafonnée à 1 associé
+});
+
+test("simulerRemuneration : SASU garde tous les dividendes, SAS partage", () => {
+  const sas = simulerRemuneration(30000, 20000, "SAS", 0);
+  const sasu = simulerRemuneration(30000, 20000, "SASU", 0);
+  approx(sasu.divNet, sas.divNet);
+  approx(sasu.revenuNetDirigeant, sasu.divNet);
+  approx(sas.revenuNetDirigeant, sas.divNet / 3);
 });

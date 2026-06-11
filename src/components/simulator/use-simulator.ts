@@ -27,9 +27,10 @@ export type Activite = "stock" | "courtage";
 export type TresoPoint = { mois: string; treso: number };
 export type VolumeScenario = { volume: string; net: number; current: boolean };
 
-// Presets de charges : prudent (modèle audité v3) vs réaliste (toutes charges réelles)
+// Presets de charges : prudent (= onglet Hypothèses de l'Excel v3, parité garantie)
+// vs réaliste (= colonne réaliste du Comparatif de l'Excel)
 export const PRESETS = {
-  prudent: { prep: 50, transport: 50, garantie: 700, petits: 135, decote: 0, local: 300, assur: 50, autres: 150 },
+  prudent: { prep: 50, transport: 50, garantie: 100, petits: 135, decote: 0, local: 0, assur: 250, autres: 150 },
   realiste: { prep: 250, transport: 50, garantie: 450, petits: 135, decote: 125, local: 500, assur: 200, autres: 564 },
 } as const;
 export const PRESET_KEYS = Object.keys(PRESETS.prudent) as (keyof typeof PRESETS.prudent)[];
@@ -44,19 +45,24 @@ export type Hypotheses = {
   activite: Activite; commission: number; arce: number; pretHonneur: number;
   // Profil de la société : synchronisé partout (démarrage, hypothèses, juridique, financier)
   nbAssocies: number; dirigeantPrenom: string; dirigeantNom: string;
-  // Projection pluriannuelle
-  croissance: number; acre: boolean;
+  // Projection 5 ans : croissance du volume et rémunération nette PAR ANNÉE (comme l'Excel)
+  croissance2: number; croissance3: number; croissance4: number; croissance5: number;
+  remunA2: number; remunA3: number; remunA4: number; remunA5: number;
+  acre: boolean;
 };
 
+// Valeurs par défaut = onglet Hypothèses de l'Excel financier v3 (parité stricte)
 export const defaults: Hypotheses = {
-  achatEg: 4000, reventeEg: 5000, achatCa: 8000, reventeCa: 9500,
+  achatEg: 2500, reventeEg: 3200, achatCa: 3000, reventeCa: 4000,
   ...PRESETS.prudent,
-  volume: 24, mixEg: 70, rotation: 2, capital: 18000,
+  volume: 24, mixEg: 90, rotation: 2, capital: 20000,
   statut: "SAS", remun: 0, distrib: 0, apresVente: 0, cfe: 0,
   mode: "prudent",
   activite: "stock", commission: 600, arce: 0, pretHonneur: 0,
   nbAssocies: NB_ASSOCIES, dirigeantPrenom: "", dirigeantNom: "",
-  croissance: 30, acre: true,
+  croissance2: 30, croissance3: 40, croissance4: 30, croissance5: 20,
+  remunA2: 0, remunA3: 0, remunA4: 12000, remunA5: 12000,
+  acre: false, // l'Excel ne modélise pas l'ACRE : désactivée par défaut pour la parité
 };
 
 // SASU = unipersonnelle : toujours 1 associé, quel que soit le nombre saisi.
@@ -94,7 +100,8 @@ export function computeModel(s: Hypotheses, opts: { acre?: number } = {}): Model
   const isSarl = s.statut === "SARL";
   const tauxSoc = isSarl ? SARL_SOC : SAS_SOC;
   const chargesSoc = s.remun * tauxSoc * acreF;
-  const cotisMin = isSarl ? Math.max(0, COTIS_MIN * acreF - chargesSoc) : 0;
+  // Règle Excel (parité) : forfait minimal TNS dû uniquement si le gérant n'est PAS rémunéré
+  const cotisMin = isSarl && s.remun === 0 ? COTIS_MIN * acreF : 0;
   const coutRemun = s.remun + chargesSoc + cotisMin;
   const remunInsoutenable = s.remun > 0 && coutRemun > Math.max(0, excedent);
   const ravis = excedent - s.remun - chargesSoc - cotisMin;
@@ -135,7 +142,10 @@ export function computeModel(s: Hypotheses, opts: { acre?: number } = {}): Model
   }
   const pointBas = Math.min(...treso.map((x) => x.treso));
   const stockMoyen = courtage ? 0 : achatsM * s.rotation;
-  const bfrFinance = stockMoyen * (1 - p);
+  // BFR = stock (net du crédit fournisseur) + frais déjà engagés sur le stock
+  // (préparation + transport + petits frais), comme l'Excel (Ratios!B21 / BFR_Financement!B10)
+  const fraisEngages = courtage ? 0 : (s.prep + s.transport + s.petits) * mVol * s.rotation;
+  const bfrFinance = stockMoyen * (1 - p) + fraisEngages;
   const rotationStock = stockMoyen ? achats / stockMoyen : 0;
   const roi = s.capital ? netSoc / s.capital : 0;
   const financementOk = ressources >= bfrFinance;
@@ -145,7 +155,7 @@ export function computeModel(s: Hypotheses, opts: { acre?: number } = {}): Model
   const vols = Array.from(new Set([12, 24, 36, 48, 60, s.volume])).sort((a, b) => a - b);
   const volScenarios: VolumeScenario[] = vols.map((v) => {
     const cM = courtage ? v * cCom : v * (mix * cEg + (1 - mix) * cCa);
-    const rav = cM - chargesFixesAn - s.cfe - s.remun - chargesSoc - (isSarl ? Math.max(0, COTIS_MIN - s.remun * SARL_SOC) : 0);
+    const rav = cM - chargesFixesAn - s.cfe - s.remun - chargesSoc - (isSarl && s.remun === 0 ? COTIS_MIN : 0);
     return { volume: v + "/an", net: Math.round(rav - isTax(rav)), current: v === s.volume };
   });
   return {
@@ -188,11 +198,9 @@ export function simulerRemuneration(
   );
   const salaireTotal = salaire * nbRemuneres;
   const chargesSoc = salaireTotal * (isSarl ? SARL_SOC : SAS_SOC);
-  // Cotisations minimales : dues par le gérant majoritaire TNS (une personne),
-  // même sans rémunération ; couvertes par ses propres cotisations s'il est salarié.
-  const cotisMin = isSarl
-    ? Math.max(0, COTIS_MIN - (nbRemuneres > 0 ? salaire * SARL_SOC : 0))
-    : 0;
+  // Règle Excel juridique (parité) : forfait minimal TNS (~1 300 €/an) dû par le
+  // gérant majoritaire uniquement s'il n'est PAS rémunéré.
+  const cotisMin = isSarl && nbRemuneres === 0 ? COTIS_MIN : 0;
   const coutSalaire = salaireTotal + chargesSoc + cotisMin;
   const baseIS = Math.max(benefice - coutSalaire, 0);
   const is = isTax(baseIS);
@@ -214,29 +222,32 @@ export function simulerRemuneration(
   };
 }
 
-// --- Projection sur 3 ans : montée en charge du volume, CFE dès l'an 2, ACRE an 1 ---
+// --- Projection sur 5 ans (parité Excel Projection_5ans) : croissance du volume et
+// rémunération PAR ANNÉE, volume non arrondi, CFE dès l'an 2, ACRE optionnelle an 1 ---
 export interface AnneeProjection {
   annee: number; volume: number; ca: number; contribution: number; netSoc: number;
-  revenuDirigeant: number; cfe: number; acreActive: boolean; tresoCumulee: number;
+  revenuDirigeant: number; remun: number; cfe: number; acreActive: boolean; tresoCumulee: number;
 }
 
-export function projeter3ans(s: Hypotheses): AnneeProjection[] {
-  const g = 1 + s.croissance / 100;
-  // CFE exonérée l'année de création, due ensuite (estimation 300 € si non saisie).
+export function projeter5ans(s: Hypotheses): AnneeProjection[] {
+  const croissances = [0, s.croissance2, s.croissance3, s.croissance4, s.croissance5];
+  const remus = [s.remun, s.remunA2, s.remunA3, s.remunA4, s.remunA5];
+  // CFE exonérée l'année de création, due ensuite (300 € comme l'Excel si non saisie).
   const cfeBase = s.cfe > 0 ? s.cfe : 300;
   let tresoCumulee = s.capital + s.arce + s.pretHonneur; // ressources de départ
+  let volume = s.volume;
   const out: AnneeProjection[] = [];
-  for (let y = 1; y <= 3; y++) {
-    const volume = Math.max(0, Math.round(s.volume * Math.pow(g, y - 1)));
+  for (let y = 1; y <= 5; y++) {
+    if (y > 1) volume = volume * (1 + croissances[y - 1] / 100); // non arrondi, comme l'Excel
     const cfe = y === 1 ? 0 : cfeBase;
+    const remun = remus[y - 1];
     const acreY = y === 1 && s.acre ? 0.5 : 0;
-    const m = computeModel({ ...s, volume, cfe }, { acre: acreY });
-    // Trésorerie cumulée (indicative) : ressources + résultat conservé chaque année
-    // (les dividendes distribués sortent de la société). Hors BFR/amortissement/décalage TVA.
+    const m = computeModel({ ...s, volume, cfe, remun }, { acre: acreY });
+    // Trésorerie cumulée (indicative) : ressources + résultat conservé chaque année.
     tresoCumulee += m.netConserve;
     out.push({
       annee: y, volume, ca: m.ca, contribution: m.contribution, netSoc: m.netSoc,
-      revenuDirigeant: m.revenuDirigeant, cfe, acreActive: acreY > 0, tresoCumulee,
+      revenuDirigeant: m.revenuDirigeant, remun, cfe, acreActive: acreY > 0, tresoCumulee,
     });
   }
   return out;
@@ -266,7 +277,11 @@ const hypothesesSchema = z.object({
   arce: numFini.min(0).max(10_000_000), pretHonneur: numFini.min(0).max(10_000_000),
   nbAssocies: numFini.min(1).max(10),
   dirigeantPrenom: z.string().trim().max(60), dirigeantNom: z.string().trim().max(60),
-  croissance: numFini.min(-100).max(300), acre: z.boolean(),
+  croissance2: numFini.min(-100).max(300), croissance3: numFini.min(-100).max(300),
+  croissance4: numFini.min(-100).max(300), croissance5: numFini.min(-100).max(300),
+  remunA2: numFini.min(0).max(10_000_000), remunA3: numFini.min(0).max(10_000_000),
+  remunA4: numFini.min(0).max(10_000_000), remunA5: numFini.min(0).max(10_000_000),
+  acre: z.boolean(),
 }).partial();
 
 function safe(parsed: unknown): Partial<Hypotheses> | null {

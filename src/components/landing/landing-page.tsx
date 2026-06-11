@@ -219,8 +219,8 @@ export function LandingPage() {
               </div>
               <div className="grid grid-cols-2 gap-3 lg:w-72">
                 {[
-                  { icon: Wallet, k: "Marge / Crit'Air 2", v: "+315 €" },
-                  { icon: Gauge, k: "Seuil rentabilité", v: "≈ 257/an" },
+                  { icon: Wallet, k: "Marge / véhicule (2ᵉ segment)", v: "+498 €" },
+                  { icon: Gauge, k: "Seuil rentabilité", v: "≈ 18/an" },
                   { icon: ShieldCheck, k: "Flat tax 2026", v: "31,4 %" },
                   { icon: Car, k: "Voie de départ", v: "Courtage" },
                 ].map((kpi) => {

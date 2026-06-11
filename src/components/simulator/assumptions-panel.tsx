@@ -249,12 +249,21 @@ export function AssumptionsPanel({ s, update, reset, setPreset, presetIntact }: 
         </Grid>
       </Section>
 
-      {/* 5 · Projection 3 ans */}
-      <Section title="Projection 3 ans" desc="Hypothèses de montée en charge utilisées par l'onglet Projection.">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-          <NumberField label="Croissance du volume / an" value={s.croissance} set={update("croissance")} min={-50} max={200} step={5} unit="% / an" hint="Ex. 30 % = volume ×1,3 chaque année." />
+      {/* 5 · Projection 5 ans (parité Excel : croissance et rémunération par année) */}
+      <Section title="Projection 5 ans" desc="Croissance du volume et rémunération du dirigeant, année par année — comme l'onglet Projection de l'Excel.">
+        <Grid>
+          <NumberField label="Croissance volume — année 2" value={s.croissance2} set={update("croissance2")} min={-50} max={200} step={5} unit="%" />
+          <NumberField label="Croissance volume — année 3" value={s.croissance3} set={update("croissance3")} min={-50} max={200} step={5} unit="%" />
+          <NumberField label="Croissance volume — année 4" value={s.croissance4} set={update("croissance4")} min={-50} max={200} step={5} unit="%" />
+          <NumberField label="Croissance volume — année 5" value={s.croissance5} set={update("croissance5")} min={-50} max={200} step={5} unit="%" />
+          <NumberField label="Rémunération nette — année 2" value={s.remunA2} set={update("remunA2")} min={0} max={120000} step={1000} unit="€ / an" />
+          <NumberField label="Rémunération nette — année 3" value={s.remunA3} set={update("remunA3")} min={0} max={120000} step={1000} unit="€ / an" />
+          <NumberField label="Rémunération nette — année 4" value={s.remunA4} set={update("remunA4")} min={0} max={120000} step={1000} unit="€ / an" />
+          <NumberField label="Rémunération nette — année 5" value={s.remunA5} set={update("remunA5")} min={0} max={120000} step={1000} unit="€ / an" />
+        </Grid>
+        <div className="mt-4 grid sm:grid-cols-2 gap-4 items-end">
           <div className="space-y-1">
-            <span className="block text-xs font-medium text-foreground/80">ACRE année 1</span>
+            <span className="block text-xs font-medium text-foreground/80">ACRE année 1 (option, hors Excel)</span>
             <Segmented<"oui" | "non">
               label="ACRE année 1" cols="grid-cols-2"
               value={s.acre ? "oui" : "non"}
@@ -262,8 +271,8 @@ export function AssumptionsPanel({ s, update, reset, setPreset, presetIntact }: 
               options={[{ v: "oui", label: "Activée" }, { v: "non", label: "Non" }]}
             />
           </div>
-          <p className="text-[11px] text-muted-foreground leading-snug sm:col-span-2 lg:col-span-1">
-            ACRE = exonération ~50 % des charges sociales la 1ʳᵉ année. La CFE est exonérée l'an 1 puis due dès l'an 2.
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            ACRE = exonération ~50 % des charges sociales la 1ʳᵉ année. Désactivée par défaut : l'Excel ne la modélise pas (parité). La CFE est exonérée l'an 1 puis due dès l'an 2 (300 €).
           </p>
         </div>
       </Section>
